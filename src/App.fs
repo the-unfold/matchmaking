@@ -25,8 +25,7 @@ type OSM()=
     class
     end
 
-let initMap()=
-    let map: Map = Map()
+let initMap() = Map()
 
 let init()=
     let element = str "root"
