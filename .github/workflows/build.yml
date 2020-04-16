@@ -1,0 +1,13 @@
+name: Build woprkflow
+on: push
+
+jobs:
+  build:
+    name: Build job
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: npm run build
+        run: npm run build
