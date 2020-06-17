@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Ol/Ol.fs" />
+    <Compile Include="Ol/Ol.Pixel.fs" />
+    <Compile Include="Ol/Ol.Coordinate.fs" />
+    <Compile Include="Ol/Ol.Events.fs" />
+    <Compile Include="Ol/Ol.Observable.fs" />
+    <Compile Include="Ol/Ol.Object.fs" />
+    <Compile Include="Ol/Ol.Geom.fs" />
+    <Compile Include="Ol/Ol.Feature.fs" />
+    <Compile Include="Ol/Ol.Source.fs" />
+    <Compile Include="Ol/Ol.Source.Vector.fs" />
+    <Compile Include="Ol/Ol.Source.Tile.fs" />
+    <Compile Include="Ol/Ol.Source.UrlImage.fs" />
+    <Compile Include="Ol/Ol.Source.UrlTile.fs" />
+    <Compile Include="Ol/Ol.Source.TileImage.fs" />
+    <Compile Include="Ol/Ol.Source.XYZ.fs" />
+    <Compile Include="Ol/Ol.Source.OSM.fs" />
+    <Compile Include="Ol/Ol.Interaction.fs" />
+    <Compile Include="Ol/Ol.Interaction.Pointer.fs" />
+    <Compile Include="Ol/Ol.Interaction.Draw.fs" />
+    <Compile Include="Ol/Ol.BaseLayer.fs" />
+    <Compile Include="Ol/Ol.Layer.fs" />
+    <Compile Include="Ol/Ol.Layer.BaseTile.fs" />
+    <Compile Include="Ol/Ol.Layer.Tile.fs" />
+    <Compile Include="Ol/Ol.Layer.BaseVector.fs" />
+    <Compile Include="Ol/Ol.Layer.Vector.fs" />
+    <Compile Include="Ol/Ol.View.fs" />
+    <Compile Include="Ol/Ol.PluggableMap.fs" />
+    <Compile Include="Ol/Ol.Map.fs" />
+    <Compile Include="App.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Browser.Dom" Version="1.1.0" />
+    <PackageReference Include="Fable.Core" Version="3.1.5" />
+  </ItemGroup>
+</Project>
