@@ -1,4 +1,4 @@
-module api.App
+module Api.App
 
 open System
 open System.IO

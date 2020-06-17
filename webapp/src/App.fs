@@ -41,6 +41,9 @@ let drawStatic: DrawStatic = jsNative
 [<Import("fromLonLat", "ol/proj")>]
 let fromLonLat: float * float -> float * float = jsNative
 
+[<Import("toLonLat", "ol/proj")>]
+let toLonLat: float * float -> float * float = jsNative
+
 let vectorSource = vectorSourceStatic.Create !!{| wrapX = false |}
 
 let mapOptions = jsOptions<MapOptions>(fun x -> 
@@ -56,13 +59,6 @@ let theMap = mapStatic.Create mapOptions
 // let draw = drawStatic.Create !!{|source = vectorSource; ``type``= Point|}
 
 
-// draw.on ("drawend", (fun (evt: DrawEvent) -> 
-//     console.log (evt.feature)
-//     console.log (evt.feature.getGeometry())
-//     console.log ((evt.feature.getGeometry() :?> SimpleGeometry).getCoordinates())
-// )) |> ignore
-// theMap.on("click", (fun evt -> console.log (evt :?> MapBrowserEvent).coordinate)) |> ignore
-// pluggableMapOnClick theMap (fun evt -> console.log evt.coordinate) |> ignore
-theMap.onClick (fun evt -> console.log evt.coordinate) |> ignore
-theMap.movestart (fun evt -> console.log evt.``type``) |> ignore
-theMap.moveend (fun evt -> console.log evt.``type``) |> ignore
+theMap.onClick (fun evt ->  console.log (evt.coordinate |> toLonLat) ) |> ignore
+// theMap.movestart (fun evt -> console.log evt.``type``) |> ignore
+// theMap.moveend (fun evt -> console.log evt.``type``) |> ignore

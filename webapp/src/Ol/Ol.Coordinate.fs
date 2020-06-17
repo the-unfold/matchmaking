@@ -1,4 +1,4 @@
 namespace Ol.Coordinate
 
 type Coordinate =
-    float array
+    float * float
