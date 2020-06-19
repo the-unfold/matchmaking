@@ -86,6 +86,16 @@ type Position = {
 
 type Radius = float<km>
 
+type Area = {
+    Center: Position
+    Radius: Radius
+}
+
+type AreaFeatures = {
+    CenterFeature: Feature
+    RadiusFeature: Feature
+}
+
 let lonLatToPosition (x: float * float): Position =
     { Lon = fst x * 1.0<deg>; Lat = snd x * 1.0<deg> }
 
@@ -93,17 +103,20 @@ let positionToLonLat (p: Position): float * float =
     (float p.Lon, float p.Lat)
 
 let addPoint (vs: VectorSource) (p: Position) =
-    let point =
+    let coords = 
         p |> positionToLonLat 
         |> fromLonLat 
-        |> pointStatic.Create 
+    let point = pointStatic.Create coords
         
-        
-    point |> featureStatic.Create |> vs.addFeature 
+    let feature = featureStatic.Create point
+
+    vs.addFeature feature
     point
 
 let movePoint (p: Point) (pos: Position) =
-    pos |> positionToLonLat |> fromLonLat |> p.setCoordinates
+    let coords = pos |> positionToLonLat |> fromLonLat
+    p.setCoordinates coords
+    coords
 
 let addCircle (vs: VectorSource) (rp: Radius * Point) =
     let coords = (snd rp).getCoordinates ()
@@ -111,75 +124,104 @@ let addCircle (vs: VectorSource) (rp: Radius * Point) =
 
     let circle = circleStatic.Create (coords, radius)
     let feature = featureStatic.Create circle
+    console.log feature
     vs.addFeature feature
     circle
 
+let setAreaFeatures (vs: VectorSource) (area: Area) =
+    let coords = area.Center |> positionToLonLat |> fromLonLat
+    let radius = (area.Radius |> float) * 1000.0
+
+    let point = pointStatic.Create coords
+    let circle = circleStatic.Create (coords, radius)
+
+    let areaFeatures = {
+        CenterFeature = featureStatic.Create point
+        RadiusFeature = featureStatic.Create circle
+    }
+
+    vs.addFeature areaFeatures.CenterFeature
+    vs.addFeature areaFeatures.RadiusFeature
+
+    areaFeatures
+
+let removeAreaFeatures (vs: VectorSource) (af: AreaFeatures option) =
+    match af with
+    | Some x -> 
+        vs.removeFeature x.CenterFeature
+        vs.removeFeature x.RadiusFeature
+    | None -> ()
+
+let changeAreaRadius (af: AreaFeatures) (r: Radius) =
+    let circle = af.RadiusFeature.getGeometry() :?> Circle
+    let rad = (r |> float) * 1000.0
+    circle.setRadius rad
+    r
 
 type Model = {
-    position: Position option
-    radius: Radius option
-    point: Point option
-    circle: Circle option
+    area: Area option
+    areaFeatures: AreaFeatures option
     text: string
 }
 
 type Msg =
-    | SetPositionMsg of Position
-    | SetRadiusMsg of Radius
-    | PointAdded of Point
-    | CircleAdded of Circle
-    | PointMoved
+    | SetArea of Area
+    | SetAreaSuccess of AreaFeatures
+    | SetRadius of Radius
+    | SetRadiusSuccess of Radius
+    | Done
     | TestResponse of string
 
 let init () = ({
-        position = None 
-        radius = None 
-        point = None 
-        circle = None 
+        area = None
+        areaFeatures = None
         text = ""
     }, Cmd.none)
 
 let update (msg: Msg) (model: Model) =
     match msg with
-    | SetPositionMsg p -> 
-        { model with position = Some p }, 
-        match model.point with
-        | Some x -> Cmd.OfFunc.perform (fun (pt, pos) -> movePoint pt pos) (x, p) (fun _ -> PointMoved)
-        | None -> Cmd.OfFunc.perform (vectorSource |> addPoint) p PointAdded
-    | SetRadiusMsg r -> 
-        { model with radius = Some r }, 
+    | SetArea a -> 
+        { model with area = Some a }, 
+        Cmd.batch [
+            Cmd.OfFunc.perform (removeAreaFeatures vectorSource) model.areaFeatures (fun _ -> Done)
+            Cmd.OfFunc.perform (setAreaFeatures vectorSource) a SetAreaSuccess
+        ]
+        
+    | SetAreaSuccess af -> 
+        { model with areaFeatures = Some af },
         Cmd.none
-    | PointAdded p -> 
-        { model with point = Some p }, 
-        Cmd.OfFunc.perform (addCircle vectorSource) (0.5<km>, p) CircleAdded
-    | CircleAdded c -> 
-        { model with circle = Some c }, 
-        Cmd.none
-    | PointMoved -> model, Cmd.none
+    | SetRadius r -> 
+        match model.area with
+        | Some a -> 
+            { model with area = Some { Center = a.Center; Radius = r } },
+            Cmd.OfFunc.perform (fun (af, rad) -> changeAreaRadius af rad) (model.areaFeatures.Value, r) SetRadiusSuccess
+        | None -> model, Cmd.none
+    | SetRadiusSuccess r -> model, Cmd.none
     | TestResponse txt -> { model with text = txt }, Cmd.none
+    | Done -> model, Cmd.none
 
 let withFallbackMessage<'T> (fallbackMsg: string) (f: 'T -> string) (x: 'T option): string =
     match x with
     | Some t -> f t
     | None -> fallbackMsg
 
-let formatPosition (x: Position) =
-    sprintf "Lon: %f, Lat: %f" x.Lon x.Lat
+let formatPosition (x: Area) =
+    sprintf "Lon: %f, Lat: %f" x.Center.Lon x.Center.Lat
 
-let formatRadius (x: Radius) =
-    sprintf "Radius: %.1fkm" x
+let formatRadius (x: Area) =
+    sprintf "Radius: %.1fkm" x.Radius
 
 let view model dispatch =
     div [] [
         div [] [
             span [] [ 
-                model.position |> 
+                model.area |> 
                 withFallbackMessage "No location" formatPosition |> 
                 str 
             ]
         ]
         div [] [
-            label [] [ model.radius |> withFallbackMessage "" formatRadius |> str ]
+            label [] [ model.area |> withFallbackMessage "" formatRadius |> str ]
             br []
             input [ 
                 Type "range"; 
@@ -188,8 +230,7 @@ let view model dispatch =
                 Step 0.1;
                 Class "slider-default";
                 Style [Width "400px"]
-                Value 0.5
-                OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadiusMsg |> dispatch) 
+                OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadius |> dispatch) 
             ]
         ]
         div [] [
@@ -207,17 +248,15 @@ let view model dispatch =
         ]
     ]
 
-
+let mapClickToDefaultArea (evt: MapBrowserEvent) =
+    {
+        Center = evt.coordinate |> toLonLat |> lonLatToPosition
+        Radius = 0.5<km>
+    }
 
 let mapSub (initial: Model) =
     let sub dispatch =
-        theMap.onClick (fun evt -> 
-            evt.coordinate |> 
-            toLonLat |> 
-            lonLatToPosition |> 
-            SetPositionMsg |> 
-            dispatch
-        ) |> ignore
+        theMap.onClick (mapClickToDefaultArea >> SetArea >> dispatch) |> ignore
     
     Cmd.ofSub sub
 

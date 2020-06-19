@@ -10,6 +10,8 @@ type VectorSource =
     abstract addFeature: Feature -> unit
     abstract addFeatures: Feature list -> unit
 
+    abstract removeFeature: Feature -> unit
+
 type VectorSourceOptions =
     abstract wrapX: bool with get, set
 
