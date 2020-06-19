@@ -19,8 +19,6 @@ type Geometry =
     inherit BaseObject
 
     abstract getClosestPoint: point: Coordinate -> Coordinate
-    abstract getCoordinates: unit -> Coordinate
-    abstract setCoordinates: Coordinate -> unit
 
 type SimpleGeometry =
     inherit Geometry
@@ -32,8 +30,9 @@ type SimpleGeometry =
 type Point =
     inherit SimpleGeometry
 
+    abstract getCoordinates: unit -> Coordinate
+    abstract setCoordinates: Coordinate -> unit
     
-       
 type Circle =
     inherit SimpleGeometry
 
@@ -42,3 +41,10 @@ type Circle =
 
     abstract setCenter: Coordinate -> unit
     abstract setRadius: float -> unit
+
+
+type PointStatic =
+    [<Emit "new $0($1...)">] abstract Create: Coordinate -> Point
+
+type CircleStatic =
+    [<Emit "new $0($1...)">] abstract Create: Coordinate * float -> Circle

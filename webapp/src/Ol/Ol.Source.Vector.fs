@@ -2,9 +2,13 @@ namespace Ol.Source.Vector
 
 open Fable.Core
 open Ol.Source
+open Ol.Feature
 
 type VectorSource =
     inherit Source
+
+    abstract addFeature: Feature -> unit
+    abstract addFeatures: Feature list -> unit
 
 type VectorSourceOptions =
     abstract wrapX: bool with get, set

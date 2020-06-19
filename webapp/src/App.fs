@@ -7,13 +7,16 @@ open Fable.React
 open Fable.React.Props
 open Elmish
 open Elmish.React
+open Fetch
 
+open Ol.Coordinate
 open Ol.Geom
 open Ol.Source.Vector
 open Ol.Source.OSM
 open Ol.Layer.Tile
 open Ol.Layer.Vector
 open Ol.Interaction.Draw
+open Ol.Feature
 open Ol.View
 open Ol.Map
 open Ol.PluggableMap
@@ -42,11 +45,22 @@ let vectorSourceStatic: VectorSourceStatic = jsNative
 [<ImportDefault("ol/interaction/Draw")>]
 let drawStatic: DrawStatic = jsNative
 
+[<ImportDefault("ol/Feature")>]
+let featureStatic: FeatureStatic = jsNative
+
+[<ImportDefault("ol/geom/Point")>]
+let pointStatic: PointStatic = jsNative
+
+[<ImportDefault("ol/geom/Circle")>]
+let circleStatic: CircleStatic = jsNative
+
 [<Import("fromLonLat", "ol/proj")>]
-let fromLonLat: float * float -> float * float = jsNative
+/// Transforms a coordinate from longitude/latitude to a different projection.
+let fromLonLat: float * float -> Coordinate = jsNative
 
 [<Import("toLonLat", "ol/proj")>]
-let toLonLat: float * float -> float * float = jsNative
+/// Transforms a coordinate to longitude/latitude.
+let toLonLat: Coordinate -> float * float = jsNative
 
 let vectorSource = vectorSourceStatic.Create !!{| wrapX = false |}
 
@@ -72,21 +86,77 @@ type Position = {
 
 type Radius = float<km>
 
+let lonLatToPosition (x: float * float): Position =
+    { Lon = fst x * 1.0<deg>; Lat = snd x * 1.0<deg> }
+
+let positionToLonLat (p: Position): float * float =
+    (float p.Lon, float p.Lat)
+
+let addPoint (vs: VectorSource) (p: Position) =
+    let point =
+        p |> positionToLonLat 
+        |> fromLonLat 
+        |> pointStatic.Create 
+        
+        
+    point |> featureStatic.Create |> vs.addFeature 
+    point
+
+let movePoint (p: Point) (pos: Position) =
+    pos |> positionToLonLat |> fromLonLat |> p.setCoordinates
+
+let addCircle (vs: VectorSource) (rp: Radius * Point) =
+    let coords = (snd rp).getCoordinates ()
+    let radius = (rp |> fst |> float) * 1000.0
+
+    let circle = circleStatic.Create (coords, radius)
+    let feature = featureStatic.Create circle
+    vs.addFeature feature
+    circle
+
+
 type Model = {
     position: Position option
     radius: Radius option
+    point: Point option
+    circle: Circle option
+    text: string
 }
 
 type Msg =
     | SetPositionMsg of Position
     | SetRadiusMsg of Radius
+    | PointAdded of Point
+    | CircleAdded of Circle
+    | PointMoved
+    | TestResponse of string
 
-let init (): Model = { position = None; radius = None }
+let init () = ({
+        position = None 
+        radius = None 
+        point = None 
+        circle = None 
+        text = ""
+    }, Cmd.none)
 
 let update (msg: Msg) (model: Model) =
     match msg with
-    | SetPositionMsg p -> { model with position = Some p }
-    | SetRadiusMsg r -> { model with radius = Some r }
+    | SetPositionMsg p -> 
+        { model with position = Some p }, 
+        match model.point with
+        | Some x -> Cmd.OfFunc.perform (fun (pt, pos) -> movePoint pt pos) (x, p) (fun _ -> PointMoved)
+        | None -> Cmd.OfFunc.perform (vectorSource |> addPoint) p PointAdded
+    | SetRadiusMsg r -> 
+        { model with radius = Some r }, 
+        Cmd.none
+    | PointAdded p -> 
+        { model with point = Some p }, 
+        Cmd.OfFunc.perform (addCircle vectorSource) (0.5<km>, p) CircleAdded
+    | CircleAdded c -> 
+        { model with circle = Some c }, 
+        Cmd.none
+    | PointMoved -> model, Cmd.none
+    | TestResponse txt -> { model with text = txt }, Cmd.none
 
 let withFallbackMessage<'T> (fallbackMsg: string) (f: 'T -> string) (x: 'T option): string =
     match x with
@@ -114,17 +184,30 @@ let view model dispatch =
             input [ 
                 Type "range"; 
                 Min 0.1; 
-                Max 1000; 
+                Max 100; 
                 Step 0.1;
                 Class "slider-default";
                 Style [Width "400px"]
+                Value 0.5
                 OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadiusMsg |> dispatch) 
             ]
         ]
+        div [] [
+            button [ 
+                OnClick (fun _ -> 
+                    let a = (fetch "https://localhost:5001/" [])
+                    a |> Promise.bind (fun x -> x.text()) |> Promise.map (TestResponse >> dispatch) |> ignore
+                )
+            ] [ 
+                str "Test Request" 
+            ]
+        ]
+        div [] [
+            label [] [ str model.text ]
+        ]
     ]
 
-let lonLatToPosition (x: float * float): Position =
-    { Lon = fst x * 1.0<deg>; Lat = snd x * 1.0<deg> }
+
 
 let mapSub (initial: Model) =
     let sub dispatch =
@@ -139,7 +222,7 @@ let mapSub (initial: Model) =
     Cmd.ofSub sub
 
 
-Program.mkSimple init update view
+Program.mkProgram init update view
 |> Program.withReactBatched  "app-root"
 |> Program.withConsoleTrace
 |> Program.withSubscription mapSub
