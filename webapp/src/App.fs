@@ -21,6 +21,7 @@ open Ol.View
 open Ol.Map
 open Ol.PluggableMap
 open Ol.PluggableMap.PluggableMapExtentions
+open Ol.Feature.FeatureExtensions
 
 importAll "ol/ol.css"
 
@@ -71,7 +72,7 @@ let mapOptions = jsOptions<MapOptions>(fun x ->
         vectorLayerStatic.Create !!{|source = vectorSource|} 
     |]
     
-    x.view <- viewStatic.Create !!{|center = fromLonLat (82.921733, 55.029910); zoom = 16.0|})
+    x.view <- viewStatic.Create !!{|center = fromLonLat (82.921733, 55.029910); zoom = 14.0|})
 
 let theMap = mapStatic.Create mapOptions
 // let draw = drawStatic.Create !!{|source = vectorSource; ``type``= Point|}
@@ -91,6 +92,7 @@ type Area = {
     Radius: Radius
 }
 
+// Feature - это понятие из контекста Open Layers
 type AreaFeatures = {
     CenterFeature: Feature
     RadiusFeature: Feature
@@ -153,10 +155,13 @@ let removeAreaFeatures (vs: VectorSource) (af: AreaFeatures option) =
     | None -> ()
 
 let changeAreaRadius (af: AreaFeatures) (r: Radius) =
-    let circle = af.RadiusFeature.getGeometry() :?> Circle
-    let rad = (r |> float) * 1000.0
-    circle.setRadius rad
-    r
+    let geomT = af.RadiusFeature.getGeometryT()
+    match geomT with 
+    | Circle c -> 
+        let rad = (r |> float) * 1000.0
+        c.setRadius rad
+        r
+    | _ -> invalidOp "changeAreaRadius: invalid geometry type - expected Circle"
 
 type Model = {
     area: Area option
@@ -170,7 +175,7 @@ type Msg =
     | SetRadius of Radius
     | SetRadiusSuccess of Radius
     | Done
-    | TestResponse of string
+    | TestMessage of string
 
 let init () = ({
         area = None
@@ -178,13 +183,14 @@ let init () = ({
         text = ""
     }, Cmd.none)
 
+
 let update (msg: Msg) (model: Model) =
     match msg with
     | SetArea a -> 
         { model with area = Some a }, 
         Cmd.batch [
-            Cmd.OfFunc.perform (removeAreaFeatures vectorSource) model.areaFeatures (fun _ -> Done)
-            Cmd.OfFunc.perform (setAreaFeatures vectorSource) a SetAreaSuccess
+            Cmd.OfFunc.either (removeAreaFeatures vectorSource) model.areaFeatures (fun _ -> Done) raise
+            Cmd.OfFunc.either (setAreaFeatures vectorSource) a SetAreaSuccess raise
         ]
         
     | SetAreaSuccess af -> 
@@ -194,10 +200,13 @@ let update (msg: Msg) (model: Model) =
         match model.area with
         | Some a -> 
             { model with area = Some { Center = a.Center; Radius = r } },
-            Cmd.OfFunc.perform (fun (af, rad) -> changeAreaRadius af rad) (model.areaFeatures.Value, r) SetRadiusSuccess
-        | None -> model, Cmd.none
-    | SetRadiusSuccess r -> model, Cmd.none
-    | TestResponse txt -> { model with text = txt }, Cmd.none
+            Cmd.OfFunc.either (fun (af, rad) -> changeAreaRadius af rad) (model.areaFeatures.Value, r) SetRadiusSuccess raise
+        | None -> 
+            model, Cmd.none
+    | SetRadiusSuccess r -> 
+        model, Cmd.none
+    | TestMessage msg -> 
+        { model with text = msg }, Cmd.none
     | Done -> model, Cmd.none
 
 let withFallbackMessage<'T> (fallbackMsg: string) (f: 'T -> string) (x: 'T option): string =
@@ -237,10 +246,10 @@ let view model dispatch =
             button [ 
                 OnClick (fun _ -> 
                     let a = (fetch "https://localhost:5001/" [])
-                    a |> Promise.bind (fun x -> x.text()) |> Promise.map (TestResponse >> dispatch) |> ignore
+                    a |> Promise.bind (fun x -> x.text()) |> Promise.map (TestMessage >> dispatch) |> ignore
                 )
             ] [ 
-                str "Test Request" 
+                str "Test Error" 
             ]
         ]
         div [] [
@@ -257,12 +266,16 @@ let mapClickToDefaultArea (evt: MapBrowserEvent) =
 let mapSub (initial: Model) =
     let sub dispatch =
         theMap.onClick (mapClickToDefaultArea >> SetArea >> dispatch) |> ignore
-    
     Cmd.ofSub sub
 
 
+
 Program.mkProgram init update view
-|> Program.withReactBatched  "app-root"
+|> Program.withReactBatched "app-root"
+|> Program.withErrorHandler (fun (str, ex) -> 
+        console.error str
+        console.error ex
+    )
 |> Program.withConsoleTrace
 |> Program.withSubscription mapSub
 |> Program.run

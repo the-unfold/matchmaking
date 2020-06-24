@@ -11,12 +11,51 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.Http
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
+open Npgsql.FSharp
+// open FSharp.Data.Sql
+
+// [<Literal>]
+// let connectionString = @"Host=192.168.99.100;Database=prototype_postgis;Username=docker;Password=docker"
+
+// type sql = SqlDataProvider<Common.DatabaseProviderTypes.POSTGRESQL, connectionString>
+
+type User = {
+    Id: int
+    Name: string
+}
+
+let connection =
+    Sql.host "192.168.99.100"
+    |> Sql.port 5433
+    |> Sql.username "docker"
+    |> Sql.password "docker"
+    |> Sql.database "prototype_postgis"
+
+let getUsers() =
+    connection
+    |> Sql.connectFromConfig
+    |> Sql.query "SELECT id, name FROM users"
+    |> Sql.execute (fun read -> {
+        Id = read.int "id"
+        Name = read.text "name"
+    })
 
 let handleGetHello =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let response = "Hello!"
             return! json response next ctx
+        }
+
+let handleGetUsers =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            let users = 
+                match getUsers() with 
+                | Ok users -> users
+                | Error e -> invalidOp "failed to get users"
+
+            return! json users next ctx
         }
 
 // ---------------------------------
@@ -28,6 +67,7 @@ let webApp =
         GET >=>
             choose [
                 route "/" >=> handleGetHello
+                route "/users" >=> handleGetUsers
             ]
         setStatusCode 404 >=> text "Not Found" ]
 

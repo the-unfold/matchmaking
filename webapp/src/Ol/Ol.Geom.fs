@@ -27,6 +27,13 @@ type SimpleGeometry =
     abstract getCoordinates: unit -> Coordinate
     abstract setCoordinates: Coordinate -> unit
 
+type GeometryCollection =
+    inherit Geometry
+
+    abstract getType: unit -> GeometryType
+    abstract getGeometries: unit -> Geometry list
+    abstract setGeometries: Geometry list -> unit
+
 type Point =
     inherit SimpleGeometry
 
@@ -42,6 +49,10 @@ type Circle =
     abstract setCenter: Coordinate -> unit
     abstract setRadius: float -> unit
 
+type LineString =
+    inherit SimpleGeometry
+
+    abstract getLength: unit -> float
 
 type PointStatic =
     [<Emit "new $0($1...)">] abstract Create: Coordinate -> Point
