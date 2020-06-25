@@ -8,6 +8,7 @@ open Fable.React.Props
 open Elmish
 open Elmish.React
 open Fetch
+open Thoth.Json 
 
 open Ol.Coordinate
 open Ol.Geom
@@ -22,6 +23,7 @@ open Ol.Map
 open Ol.PluggableMap
 open Ol.PluggableMap.PluggableMapExtentions
 open Ol.Feature.FeatureExtensions
+
 
 importAll "ol/ol.css"
 
@@ -80,10 +82,17 @@ let theMap = mapStatic.Create mapOptions
 [<Measure>] type km
 [<Measure>] type deg
 
+// let decoder = fun x -> x * 1.0<deg> <!> Json.read "Lat"
+
 type Position = {
     Lon: float<deg>
     Lat: float<deg>
-}
+} with
+    static member Decoder: Decoder<Position> =
+        Decode.map2 
+            (fun lat lon -> {Lat = lat * 1.0<deg>; Lon = lon * 1.0<deg>})
+            (Decode.field "lat" Decode.float)
+            (Decode.field "lon" Decode.float)
 
 type Radius = float<km>
 
@@ -98,11 +107,30 @@ type AreaFeatures = {
     RadiusFeature: Feature
 }
 
+type User = {
+    Id: int
+    Name: string
+    Location: Position
+    Radius: float
+} with 
+    static member Decoder: Decoder<User> =
+        Decode.map4 
+            (fun i n l r -> {Id = i; Name = n; Location = l; Radius = r})
+            (Decode.field "id" Decode.int)
+            (Decode.field "name" Decode.string)
+            (Decode.field "location" Position.Decoder)
+            (Decode.field "radius" Decode.float)
+
+
+
 let lonLatToPosition (x: float * float): Position =
     { Lon = fst x * 1.0<deg>; Lat = snd x * 1.0<deg> }
 
 let positionToLonLat (p: Position): float * float =
     (float p.Lon, float p.Lat)
+
+let parseUsers json =
+    (Decode.fromString (Decode.list User.Decoder)) json 
 
 let addPoint (vs: VectorSource) (p: Position) =
     let coords = 
@@ -163,10 +191,25 @@ let changeAreaRadius (af: AreaFeatures) (r: Radius) =
         r
     | _ -> invalidOp "changeAreaRadius: invalid geometry type - expected Circle"
 
+let addUserFeatures (vs: VectorSource) (u: User) =
+    // match user with 
+    // | Result.Ok u -> 
+        let coords = u.Location |> positionToLonLat |> fromLonLat
+        let radius = u.Radius
+
+        let point = pointStatic.Create coords
+        let circle = circleStatic.Create (coords, radius)
+
+        point |> featureStatic.Create |> vs.addFeature
+        circle |> featureStatic.Create |> vs.addFeature
+    // | Result.Error -> ()
+        
+
 type Model = {
     area: Area option
     areaFeatures: AreaFeatures option
     text: string
+    users: Result<User list, string>
 }
 
 type Msg =
@@ -174,6 +217,8 @@ type Msg =
     | SetAreaSuccess of AreaFeatures
     | SetRadius of Radius
     | SetRadiusSuccess of Radius
+    | GetUsers
+    | SetUsers of Result<User list, string>
     | Done
     | TestMessage of string
 
@@ -181,8 +226,21 @@ let init () = ({
         area = None
         areaFeatures = None
         text = ""
+        users = Result.Ok []
     }, Cmd.none)
 
+// let rmlm = (List.map >> Result.map) (fun (u: User) -> Cmd.OfFunc.either (addUserFeatures vectorSource) u (fun _-> Done) raise)
+// let rmlm = (List.map >> Result.map) ((fun (u: User) -> Cmd.none))
+// let rm = Result.map (List.toSeq >> Cmd.batch)
+// let lm = ((Seq.map) (fun (u: User) -> Cmd.none)) 
+
+// let mapAndBatch = fun (urs: Result<User list, string>) -> 
+    // urs |> Result.map (List.map (fun u -> Cmd.none) >> List.toSeq >> Cmd.batch)
+
+let getUsersSub () =
+    (fetch "https://localhost:5001/users" []) 
+    |> Promise.bind (fun r -> r.text())
+    |> Promise.map (parseUsers)
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -205,6 +263,14 @@ let update (msg: Msg) (model: Model) =
             model, Cmd.none
     | SetRadiusSuccess r -> 
         model, Cmd.none
+    | GetUsers -> 
+        model, Cmd.OfPromise.either getUsersSub () SetUsers raise
+    | SetUsers users ->
+        { model with users = users },
+        match users with 
+        | Result.Ok us -> 
+            Cmd.OfFunc.either (List.map (addUserFeatures vectorSource)) us (fun _-> Done) raise
+        | Result.Error e -> invalidOp e
     | TestMessage msg -> 
         { model with text = msg }, Cmd.none
     | Done -> model, Cmd.none
@@ -219,6 +285,8 @@ let formatPosition (x: Area) =
 
 let formatRadius (x: Area) =
     sprintf "Radius: %.1fkm" x.Radius
+
+
 
 let view model dispatch =
     div [] [
@@ -235,7 +303,7 @@ let view model dispatch =
             input [ 
                 Type "range"; 
                 Min 0.1; 
-                Max 100; 
+                Max 5; 
                 Step 0.1;
                 Class "slider-default";
                 Style [Width "400px"]
@@ -244,12 +312,9 @@ let view model dispatch =
         ]
         div [] [
             button [ 
-                OnClick (fun _ -> 
-                    let a = (fetch "https://localhost:5001/" [])
-                    a |> Promise.bind (fun x -> x.text()) |> Promise.map (TestMessage >> dispatch) |> ignore
-                )
+                OnClick (fun _ -> dispatch GetUsers)
             ] [ 
-                str "Test Error" 
+                str "Show All Users" 
             ]
         ]
         div [] [

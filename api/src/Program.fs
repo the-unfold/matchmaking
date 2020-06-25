@@ -12,17 +12,36 @@ open Microsoft.AspNetCore.Http
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Npgsql.FSharp
+open Chiron
+let (<!>) = Chiron.Operators.(<!>)
 // open FSharp.Data.Sql
+
+
 
 // [<Literal>]
 // let connectionString = @"Host=192.168.99.100;Database=prototype_postgis;Username=docker;Password=docker"
 
 // type sql = SqlDataProvider<Common.DatabaseProviderTypes.POSTGRESQL, connectionString>
 
+type Position = {
+    Lat: float
+    Lon: float
+    } with 
+
+    static member FromJson (_ : Position) = 
+            fun (lat, lon) -> { Lon = lon; Lat = lat }
+            <!> Json.read "coordinates"
+
+
 type User = {
     Id: int
     Name: string
+    Location: Position
+    Radius: float
 }
+
+let parsePosition json: Position =
+    (Json.parse >> Json.deserialize) json
 
 let connection =
     Sql.host "192.168.99.100"
@@ -34,28 +53,30 @@ let connection =
 let getUsers() =
     connection
     |> Sql.connectFromConfig
-    |> Sql.query "SELECT id, name FROM users"
+    |> Sql.query "SELECT id, name, ST_AsGeoJson(location) as loc, radius FROM users"
     |> Sql.execute (fun read -> {
         Id = read.int "id"
         Name = read.text "name"
+        Location =  "loc" |> read.text |> parsePosition
+        Radius = read.double "radius"
     })
 
 let handleGetHello =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let response = "Hello!"
-            return! json response next ctx
+            return! Giraffe.ResponseWriters.json response next ctx
         }
 
 let handleGetUsers =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let users = 
-                match getUsers() with 
-                | Ok users -> users
-                | Error e -> invalidOp "failed to get users"
+                match getUsers() with                 
+                | Result.Ok users -> users
+                | Result.Error e -> raise e
 
-            return! json users next ctx
+            return! Giraffe.ResponseWriters.json users next ctx
         }
 
 // ---------------------------------
