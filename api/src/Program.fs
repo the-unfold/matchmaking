@@ -61,6 +61,17 @@ let getUsers() =
         Radius = read.double "radius"
     })
 
+let getUsersInArea (lon: float) (lat: float) (rad: float) =
+    connection
+    |> Sql.connectFromConfig
+    |> Sql.query "SELECT name FROM users WHERE ST_Intersects(
+        st_buffer(ST_GeographyFromText(@point), @rad), 
+        st_buffer(users.location, users.radius))"
+    |> Sql.parameters [
+        ("point", Sql.string (sprintf "POINT(%f %f)" lon lat))
+        ("rad", Sql.double rad) ]
+    |> Sql.execute (fun read -> read.string "name")
+
 let handleGetHello =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
@@ -79,6 +90,17 @@ let handleGetUsers =
             return! Giraffe.ResponseWriters.json users next ctx
         }
 
+let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            let users = 
+                match getUsersInArea lon lat rad with
+                | Result.Ok us -> us
+                | Result.Error e -> raise e
+
+            return! Giraffe.ResponseWriters.json users next ctx
+        }
+
 // ---------------------------------
 // Web app
 // ---------------------------------
@@ -89,6 +111,7 @@ let webApp =
             choose [
                 route "/" >=> handleGetHello
                 route "/users" >=> handleGetUsers
+                routef "/find-users/%f-%f-%f" handleFindUsers
             ]
         setStatusCode 404 >=> text "Not Found" ]
 

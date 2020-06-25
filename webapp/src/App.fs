@@ -132,6 +132,7 @@ let positionToLonLat (p: Position): float * float =
 let parseUsers json =
     (Decode.fromString (Decode.list User.Decoder)) json 
 
+
 let addPoint (vs: VectorSource) (p: Position) =
     let coords = 
         p |> positionToLonLat 
@@ -209,7 +210,8 @@ type Model = {
     area: Area option
     areaFeatures: AreaFeatures option
     text: string
-    users: Result<User list, string>
+    users: User list
+    foundUsers: string list
 }
 
 type Msg =
@@ -218,7 +220,9 @@ type Msg =
     | SetRadius of Radius
     | SetRadiusSuccess of Radius
     | GetUsers
-    | SetUsers of Result<User list, string>
+    | GetUsersSuccess of Result<User list, string>
+    | FindUsers of Area
+    | FindUsersSuccess of Result<string list, string>
     | Done
     | TestMessage of string
 
@@ -226,7 +230,8 @@ let init () = ({
         area = None
         areaFeatures = None
         text = ""
-        users = Result.Ok []
+        users = []
+        foundUsers = []
     }, Cmd.none)
 
 // let rmlm = (List.map >> Result.map) (fun (u: User) -> Cmd.OfFunc.either (addUserFeatures vectorSource) u (fun _-> Done) raise)
@@ -241,6 +246,11 @@ let getUsersSub () =
     (fetch "https://localhost:5001/users" []) 
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (parseUsers)
+
+let findUsersSub area =
+    (fetch (sprintf "https://localhost:5001/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
+    |> Promise.bind (fun r -> r.text())
+    |> Promise.map (fun txt -> Decode.fromString (Decode.list Decode.string) txt)
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -262,14 +272,22 @@ let update (msg: Msg) (model: Model) =
         | None -> 
             model, Cmd.none
     | SetRadiusSuccess r -> 
-        model, Cmd.none
+        match model.area with 
+        | Some a -> (model, Cmd.ofMsg (FindUsers a))
+        | None -> model, Cmd.none
     | GetUsers -> 
-        model, Cmd.OfPromise.either getUsersSub () SetUsers raise
-    | SetUsers users ->
-        { model with users = users },
+        model, Cmd.OfPromise.either getUsersSub () GetUsersSuccess raise
+    | GetUsersSuccess users ->
         match users with 
         | Result.Ok us -> 
+            { model with users = us },
             Cmd.OfFunc.either (List.map (addUserFeatures vectorSource)) us (fun _-> Done) raise
+        | Result.Error e -> invalidOp e
+    | FindUsers area ->
+        model, Cmd.OfPromise.either findUsersSub area FindUsersSuccess raise
+    | FindUsersSuccess users ->
+        match users with 
+        | Result.Ok us -> { model with foundUsers = us }, Cmd.none
         | Result.Error e -> invalidOp e
     | TestMessage msg -> 
         { model with text = msg }, Cmd.none
@@ -308,6 +326,14 @@ let view model dispatch =
                 Class "slider-default";
                 Style [Width "400px"]
                 OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadius |> dispatch) 
+            ]
+        ]
+        div [] [
+            label [] [ if model.foundUsers.Length > 0 then str "Users nearby:" else str "You're alone..."]
+        ]
+        div [] [
+            ol [] [
+                for u in model.foundUsers -> li [] [ str u ]
             ]
         ]
         div [] [
