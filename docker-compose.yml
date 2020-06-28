@@ -1,0 +1,37 @@
+version: '3.5'
+
+services:
+  nginx:
+    image: 'nginx:1.18.0-alpine'
+    depends_on: 
+      - webapp
+    volumes:
+      - './nginx/conf.d/:/etc/nginx/conf.d/'
+    ports:
+      - '8080:80'
+    networks:
+      - app-network
+  
+  webapp:
+    build:
+      context: webapp
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: api
+    networks:
+      - app-network
+     
+  posgis:
+    build:
+      context: postgis
+    ports:
+      - '5432:5432'
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

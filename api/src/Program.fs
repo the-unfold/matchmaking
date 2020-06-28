@@ -14,14 +14,6 @@ open Giraffe
 open Npgsql.FSharp
 open Chiron
 let (<!>) = Chiron.Operators.(<!>)
-// open FSharp.Data.Sql
-
-
-
-// [<Literal>]
-// let connectionString = @"Host=192.168.99.100;Database=prototype_postgis;Username=docker;Password=docker"
-
-// type sql = SqlDataProvider<Common.DatabaseProviderTypes.POSTGRESQL, connectionString>
 
 type Position = {
     Lat: float

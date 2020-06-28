@@ -224,6 +224,7 @@ type Msg =
     | FindUsers of Area
     | FindUsersSuccess of Result<string list, string>
     | Done
+    | GetTestMessage
     | TestMessage of string
 
 let init () = ({
@@ -242,13 +243,17 @@ let init () = ({
 // let mapAndBatch = fun (urs: Result<User list, string>) -> 
     // urs |> Result.map (List.map (fun u -> Cmd.none) >> List.toSeq >> Cmd.batch)
 
+let getText () =
+    (fetch "http://192.168.99.100:8080/api/" [])
+    |> Promise.bind (fun r -> r.text())
+
 let getUsersSub () =
-    (fetch "https://localhost:5001/users" []) 
+    (fetch "http://192.168.99.100:8080/api/users" []) 
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (parseUsers)
 
 let findUsersSub area =
-    (fetch (sprintf "https://localhost:5001/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
+    (fetch (sprintf "http://192.168.99.100:8080/api/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (fun txt -> Decode.fromString (Decode.list Decode.string) txt)
 
@@ -289,6 +294,8 @@ let update (msg: Msg) (model: Model) =
         match users with 
         | Result.Ok us -> { model with foundUsers = us }, Cmd.none
         | Result.Error e -> invalidOp e
+    | GetTestMessage -> 
+        model, Cmd.OfPromise.either getText () TestMessage raise
     | TestMessage msg -> 
         { model with text = msg }, Cmd.none
     | Done -> model, Cmd.none
@@ -341,6 +348,13 @@ let view model dispatch =
                 OnClick (fun _ -> dispatch GetUsers)
             ] [ 
                 str "Show All Users" 
+            ]
+        ]
+        div [] [
+            button [
+                OnClick (fun _ -> dispatch GetTestMessage)
+            ] [
+                str "Text"
             ]
         ]
         div [] [

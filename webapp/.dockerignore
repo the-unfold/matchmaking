@@ -1,0 +1,8 @@
+node_modules
+.fable
+.ionide
+src/bin
+src/obj
+.dockerignore
+.gitignore
+README.md
