@@ -23,8 +23,10 @@ services:
       context: api
     networks:
       - app-network
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
      
-  posgis:
+  postgis:
     build:
       context: postgis
     ports:

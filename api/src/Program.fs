@@ -36,11 +36,11 @@ let parsePosition json: Position =
     (Json.parse >> Json.deserialize) json
 
 let connection =
-    Sql.host "192.168.99.100"
-    |> Sql.port 5433
+    Sql.host "postgis"
+    |> Sql.port 5432
     |> Sql.username "docker"
     |> Sql.password "docker"
-    |> Sql.database "prototype_postgis"
+    |> Sql.database "gis"
 
 let getUsers() =
     connection
@@ -68,6 +68,13 @@ let handleGetHello =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let response = "Hello!"
+            return! Giraffe.ResponseWriters.json response next ctx
+        }
+
+let handleGetHelloApi =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            let response = "Hello Api!"
             return! Giraffe.ResponseWriters.json response next ctx
         }
 
@@ -102,6 +109,7 @@ let webApp =
         GET >=>
             choose [
                 route "/" >=> handleGetHello
+                route "/api" >=> handleGetHelloApi
                 route "/users" >=> handleGetUsers
                 routef "/find-users/%f-%f-%f" handleFindUsers
             ]
@@ -120,7 +128,7 @@ let errorHandler (ex : Exception) (logger : ILogger) =
 // ---------------------------------
 
 let configureCors (builder : CorsPolicyBuilder) =
-    builder.WithOrigins("http://localhost:8080")
+    builder.WithOrigins("")
            .AllowAnyMethod()
            .AllowAnyHeader()
            |> ignore
@@ -139,7 +147,7 @@ let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
 
 let configureLogging (builder : ILoggingBuilder) =
-    builder.AddFilter(fun l -> l.Equals LogLevel.Error)
+    builder.AddFilter(fun l -> l.Equals LogLevel.Information)
            .AddConsole()
            .AddDebug() |> ignore
 
@@ -154,16 +162,3 @@ let main _ =
         .Build()
         .Run()
     0
-    // let contentRoot = Directory.GetCurrentDirectory()
-    // let webRoot     = Path.Combine(contentRoot, "WebRoot")
-    // WebHostBuilder()
-    //     .UseKestrel()
-    //     .UseContentRoot(contentRoot)
-    //     .UseIISIntegration()
-    //     .UseWebRoot(webRoot)
-    //     .Configure(Action<IApplicationBuilder> configureApp)
-    //     .ConfigureServices(configureServices)
-    //     .ConfigureLogging(configureLogging)
-    //     .Build()
-    //     .Run()
-    // 0

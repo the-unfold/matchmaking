@@ -244,16 +244,16 @@ let init () = ({
     // urs |> Result.map (List.map (fun u -> Cmd.none) >> List.toSeq >> Cmd.batch)
 
 let getText () =
-    (fetch "http://192.168.99.100:8080/api/" [])
+    (fetch "/api/" [])
     |> Promise.bind (fun r -> r.text())
 
 let getUsersSub () =
-    (fetch "http://192.168.99.100:8080/api/users" []) 
+    (fetch "/api/users" []) 
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (parseUsers)
 
 let findUsersSub area =
-    (fetch (sprintf "http://192.168.99.100:8080/api/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
+    (fetch (sprintf "/api/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (fun txt -> Decode.fromString (Decode.list Decode.string) txt)
 
