@@ -24,7 +24,7 @@ open Ol.PluggableMap
 open Ol.PluggableMap.PluggableMapExtentions
 open Ol.Feature.FeatureExtensions
 
-
+// importing OpenLayers js library using F# type mappings
 importAll "ol/ol.css"
 
 [<ImportDefault("ol/Map")>]
@@ -65,6 +65,8 @@ let fromLonLat: float * float -> Coordinate = jsNative
 /// Transforms a coordinate to longitude/latitude.
 let toLonLat: Coordinate -> float * float = jsNative
 
+
+// creating a basic map
 let vectorSource = vectorSourceStatic.Create !!{| wrapX = false |}
 
 let mapOptions = jsOptions<MapOptions>(fun x -> 
@@ -79,11 +81,11 @@ let mapOptions = jsOptions<MapOptions>(fun x ->
 let theMap = mapStatic.Create mapOptions
 // let draw = drawStatic.Create !!{|source = vectorSource; ``type``= Point|}
 
+// type declarations
 [<Measure>] type km
 [<Measure>] type deg
 
-// let decoder = fun x -> x * 1.0<deg> <!> Json.read "Lat"
-
+/// Широта и долгота. Общего назначения
 type Position = {
     Lon: float<deg>
     Lat: float<deg>
@@ -96,6 +98,9 @@ type Position = {
 
 type Radius = float<km>
 
+/// Сейчас используется для того, чтобы обозначить территорию,
+/// на которой пользователь хочет собирать добычу и владеть самками
+/// (на которой определено пожелание пользователя...)
 type Area = {
     Center: Position
     Radius: Radius
@@ -122,17 +127,21 @@ type User = {
             (Decode.field "radius" Decode.float)
 
 
+// helper functions
 
+/// Converts (longitude, latitude) into Position type
 let lonLatToPosition (x: float * float): Position =
     { Lon = fst x * 1.0<deg>; Lat = snd x * 1.0<deg> }
 
+/// Converts Position into (longitude, latitude)
 let positionToLonLat (p: Position): float * float =
     (float p.Lon, float p.Lat)
 
+/// Decode User from json
 let parseUsers json =
     (Decode.fromString (Decode.list User.Decoder)) json 
 
-
+/// Creates an OpenLayers Point map feature and adds it into a VectorSource
 let addPoint (vs: VectorSource) (p: Position) =
     let coords = 
         p |> positionToLonLat 
@@ -144,11 +153,13 @@ let addPoint (vs: VectorSource) (p: Position) =
     vs.addFeature feature
     point
 
+/// Changes OpenLayers Point coordinates
 let movePoint (p: Point) (pos: Position) =
     let coords = pos |> positionToLonLat |> fromLonLat
     p.setCoordinates coords
     coords
 
+/// Creates an OpenLayers Circle map feature and adds it into a VectorSource
 let addCircle (vs: VectorSource) (rp: Radius * Point) =
     let coords = (snd rp).getCoordinates ()
     let radius = (rp |> fst |> float) * 1000.0
@@ -159,6 +170,7 @@ let addCircle (vs: VectorSource) (rp: Radius * Point) =
     vs.addFeature feature
     circle
 
+/// Creates OpenLayers map features (Point and Circle) from a given Area and adds them into a VectorSource
 let setAreaFeatures (vs: VectorSource) (area: Area) =
     let coords = area.Center |> positionToLonLat |> fromLonLat
     let radius = (area.Radius |> float) * 1000.0
@@ -176,6 +188,7 @@ let setAreaFeatures (vs: VectorSource) (area: Area) =
 
     areaFeatures
 
+/// Removes given OpenLayers features from a VectorSource
 let removeAreaFeatures (vs: VectorSource) (af: AreaFeatures option) =
     match af with
     | Some x -> 
@@ -183,6 +196,7 @@ let removeAreaFeatures (vs: VectorSource) (af: AreaFeatures option) =
         vs.removeFeature x.RadiusFeature
     | None -> ()
 
+/// Changes the radius of a given OpenLayers Circle feature
 let changeAreaRadius (af: AreaFeatures) (r: Radius) =
     let geomT = af.RadiusFeature.getGeometryT()
     match geomT with 
@@ -192,18 +206,16 @@ let changeAreaRadius (af: AreaFeatures) (r: Radius) =
         r
     | _ -> invalidOp "changeAreaRadius: invalid geometry type - expected Circle"
 
+/// Creates OpenLayers Point and Circle map features for a given User and adds them to a VectorSource
 let addUserFeatures (vs: VectorSource) (u: User) =
-    // match user with 
-    // | Result.Ok u -> 
-        let coords = u.Location |> positionToLonLat |> fromLonLat
-        let radius = u.Radius
+    let coords = u.Location |> positionToLonLat |> fromLonLat
+    let radius = u.Radius
 
-        let point = pointStatic.Create coords
-        let circle = circleStatic.Create (coords, radius)
+    let point = pointStatic.Create coords
+    let circle = circleStatic.Create (coords, radius)
 
-        point |> featureStatic.Create |> vs.addFeature
-        circle |> featureStatic.Create |> vs.addFeature
-    // | Result.Error -> ()
+    point |> featureStatic.Create |> vs.addFeature
+    circle |> featureStatic.Create |> vs.addFeature
         
 
 type Model = {
@@ -215,17 +227,17 @@ type Model = {
 }
 
 type Msg =
-    | SetArea of Area
-    | SetAreaSuccess of AreaFeatures
-    | SetRadius of Radius
-    | SetRadiusSuccess of Radius
-    | GetUsers
-    | GetUsersSuccess of Result<User list, string>
-    | FindUsers of Area
-    | FindUsersSuccess of Result<string list, string>
-    | Done
-    | GetTestMessage
-    | TestMessage of string
+    | SetArea of Area // Пользователь установил точку с default радиусом
+    | SetAreaSuccess of AreaFeatures // Точка успешно установилась в OpenLayers
+    | SetRadius of Radius // Пользователь изменил радиус
+    | SetRadiusSuccess of Radius // Радиус успешно изменен в OpenLayers
+    | GetUsers // Приложение захотело получить users от сервера
+    | GetUsersSuccess of Result<User list, string> // Пришёл ответ с users
+    | FindUsers of Area // Пользователь нажал кнопку Get All Users
+    | FindUsersSuccess of Result<string list, string> // Пришёл ответ с all users
+    | Done // does nothing
+    | GetTestMessage // for testing api
+    | TestMessage of string // for testing
 
 let init () = ({
         area = None
@@ -235,13 +247,7 @@ let init () = ({
         foundUsers = []
     }, Cmd.none)
 
-// let rmlm = (List.map >> Result.map) (fun (u: User) -> Cmd.OfFunc.either (addUserFeatures vectorSource) u (fun _-> Done) raise)
-// let rmlm = (List.map >> Result.map) ((fun (u: User) -> Cmd.none))
-// let rm = Result.map (List.toSeq >> Cmd.batch)
-// let lm = ((Seq.map) (fun (u: User) -> Cmd.none)) 
-
-// let mapAndBatch = fun (urs: Result<User list, string>) -> 
-    // urs |> Result.map (List.map (fun u -> Cmd.none) >> List.toSeq >> Cmd.batch)
+// api fetch functions
 
 let getText () =
     (fetch "/api/" [])
@@ -256,6 +262,8 @@ let findUsersSub area =
     (fetch (sprintf "/api/find-users/%f-%f-%f" area.Center.Lat area.Center.Lon (area.Radius * 1000.0)) [])
     |> Promise.bind (fun r -> r.text())
     |> Promise.map (fun txt -> Decode.fromString (Decode.list Decode.string) txt)
+
+
 
 let update (msg: Msg) (model: Model) =
     match msg with
@@ -300,30 +308,27 @@ let update (msg: Msg) (model: Model) =
         { model with text = msg }, Cmd.none
     | Done -> model, Cmd.none
 
-let withFallbackMessage<'T> (fallbackMsg: string) (f: 'T -> string) (x: 'T option): string =
-    match x with
-    | Some t -> f t
-    | None -> fallbackMsg
 
-let formatPosition (x: Area) =
+let showPosition _ (x: Area) =
     sprintf "Lon: %f, Lat: %f" x.Center.Lon x.Center.Lat
 
-let formatRadius (x: Area) =
+let showRadius _ (x: Area) =
     sprintf "Radius: %.1fkm" x.Radius
 
-
+let a =
+    Option.fold 
 
 let view model dispatch =
     div [] [
         div [] [
             span [] [ 
-                model.area |> 
-                withFallbackMessage "No location" formatPosition |> 
-                str 
+                model.area 
+                |> Option.fold showPosition "No location"
+                |> str 
             ]
         ]
         div [] [
-            label [] [ model.area |> withFallbackMessage "" formatRadius |> str ]
+            label [] [ model.area |> Option.fold showRadius "" |> str ]
             br []
             input [ 
                 Type "range"; 
@@ -372,7 +377,6 @@ let mapSub (initial: Model) =
     let sub dispatch =
         theMap.onClick (mapClickToDefaultArea >> SetArea >> dispatch) |> ignore
     Cmd.ofSub sub
-
 
 
 Program.mkProgram init update view
