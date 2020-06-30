@@ -3,6 +3,7 @@
 - [Что это такое](docs/intro.md)
 - [Словарь терминов](docs/dictionary.md)
 - [Дизайн (Figma)](https://www.figma.com/file/gYwh3nBXKeLmdZRqVdQ2Fl/Matchmaking-MVP)
+- [Onboarding](docs/onboarding.md)
 - [Архитектура](docs/architecture.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
