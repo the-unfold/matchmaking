@@ -69,13 +69,13 @@ let toLonLat: Coordinate -> float * float = jsNative
 // creating a basic map
 let vectorSource = vectorSourceStatic.Create !!{| wrapX = false |}
 
+
 let mapOptions = jsOptions<MapOptions>(fun x -> 
     x.target <- "map"
     x.layers <- [| 
-        tileLayerStatic.Create !!{|source = osmStatic.Create ()|}
+        tileLayerStatic.Create !!{|source = osmStatic.Create ()|} // {source: new OSM()}
         vectorLayerStatic.Create !!{|source = vectorSource|} 
     |]
-    
     x.view <- viewStatic.Create !!{|center = fromLonLat (82.921733, 55.029910); zoom = 14.0|})
 
 let theMap = mapStatic.Create mapOptions
@@ -314,9 +314,6 @@ let showPosition _ (x: Area) =
 
 let showRadius _ (x: Area) =
     sprintf "Radius: %.1fkm" x.Radius
-
-let a =
-    Option.fold 
 
 let view model dispatch =
     div [] [

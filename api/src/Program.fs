@@ -67,7 +67,7 @@ let getUsersInArea (lon: float) (lat: float) (rad: float) =
 let handleGetHello =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
-            let response = "Hello!"
+            let response = "Hello there!"
             return! Giraffe.ResponseWriters.json response next ctx
         }
 

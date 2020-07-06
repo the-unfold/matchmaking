@@ -7,10 +7,12 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./webapp:/dev-app
-      - /dev-app/node_modules # exclude
-      - /dev-app/.fable # exclude
-      - /dev-app/src/bin # exclude
-      - /dev-app/src/obj # exclude
+      - /dev-app/node_modules/ # exclude
+      - /dev-app/.fable/ # exclude
+      - /dev-app/src/bin/ # exclude
+      - /dev-app/src/obj/ # exclude
+    ports:
+      - '80:80'
   api:
     # выполнить `docker-compose build webapp` при переходе в `dev режим` или изменении зависимостей
     build: 
