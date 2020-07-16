@@ -14,6 +14,7 @@
     <PackageReference Include="FSharp.Data.SqlClient" Version="2.0.6"/>
     <PackageReference Include="Npgsql.FSharp" Version="3.6.0"/>
     <PackageReference Include="Chiron" Version="6.3.1"/>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.6"/>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.fs"/>

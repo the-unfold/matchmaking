@@ -4,11 +4,13 @@ open System
 open System.IO
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Cors.Infrastructure
+open Microsoft.AspNetCore.Authentication.JwtBearer
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.Http
+open Microsoft.IdentityModel.Tokens
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Npgsql.FSharp
@@ -100,15 +102,23 @@ let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
             return! Giraffe.ResponseWriters.json users next ctx
         }
 
+let handleGetSecured: HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        text "Secured hello!" next ctx
+
 // ---------------------------------
 // Web app
 // ---------------------------------
+
+let authorize =
+    requiresAuthentication (challenge JwtBearerDefaults.AuthenticationScheme)
 
 let webApp =
     choose [
         GET >=>
             choose [
                 route "/" >=> handleGetHello
+                route "/secured" >=> authorize >=> handleGetSecured
                 route "/api" >=> handleGetHelloApi
                 route "/users" >=> handleGetUsers
                 routef "/find-users/%f-%f-%f" handleFindUsers
@@ -137,14 +147,32 @@ let configureApp (context: WebHostBuilderContext) (app : IApplicationBuilder) =
     (match context.HostingEnvironment.IsDevelopment () with
     | true  -> app.UseDeveloperExceptionPage()
     | false -> app.UseGiraffeErrorHandler errorHandler)
+        .UseAuthentication()
+        .UseAuthorization()
         .UseHttpsRedirection()
         .UseCors(configureCors)
         .UseStaticFiles()
         .UseGiraffe(webApp)
 
 let configureServices (services : IServiceCollection) =
-    services.AddCors()    |> ignore
-    services.AddGiraffe() |> ignore
+    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(fun options ->
+            options.RequireHttpsMetadata <- false // need to figure out the correct way to set up ssl to remove this
+            options.Authority <- "http://localhost:6000" // and use https here
+            options.TokenValidationParameters <- TokenValidationParameters (
+                ValidateAudience = false
+            ) 
+        ) |> ignore
+
+    services.AddAuthorization(fun options -> 
+        options.AddPolicy("api", fun policy -> 
+            policy.RequireAuthenticatedUser () |> ignore
+            policy.RequireClaim("scope", "api") |> ignore
+        )
+    ) |> ignore
+
+    services.AddCors()
+        .AddGiraffe() |> ignore
 
 let configureLogging (builder : ILoggingBuilder) =
     builder.AddFilter(fun l -> l.Equals LogLevel.Information)
