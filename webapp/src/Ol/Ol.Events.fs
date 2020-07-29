@@ -3,12 +3,6 @@ namespace Ol.Events
 open Fable.Core
 open Ol
 
-type Target =
-    inherit Disposable
-
-type EventsKey =
-    abstract ``type``: string
-
 type BaseEvent =
     abstract ``type``: string
     abstract target: obj
@@ -17,3 +11,14 @@ type BaseEvent =
 
 type ListenerFunction =
     BaseEvent -> unit
+
+type Target =
+    inherit Disposable
+
+type EventsKey =
+    abstract ``type``: string
+    abstract listener: ListenerFunction
+    abstract target: obj
+
+
+

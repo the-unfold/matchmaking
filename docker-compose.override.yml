@@ -21,4 +21,12 @@ services:
       - ./api:/app
       - /app/src/bin # exclude
       - /app/src/obj # exclude
+  auth:
+    build:
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./auth:/app
+      - /app/bin # exclude
+      - /app/obj #exclude
+      
       

@@ -16,6 +16,12 @@ module Configuration =
                 AllowedGrantTypes = GrantTypes.ClientCredentials,
                 AllowedScopes = [| "api" |]
             )
+            Client(
+                ClientId = "client_id_app",
+                ClientSecrets = [| Secret("client_secret_app".Sha256()) |],
+                AllowedGrantTypes = GrantTypes.Code,
+                AllowedScopes = [| "api" |]
+            )
         ]
 
     let getApiResources () =

@@ -31,6 +31,12 @@
     <Compile Include="Ol/Ol.View.fs"/>
     <Compile Include="Ol/Ol.PluggableMap.fs"/>
     <Compile Include="Ol/Ol.Map.fs"/>
+    <Compile Include="OlImport.fs"/>
+    <Compile Include="Common.fs"/>
+    <Compile Include="Utils.fs"/>
+    <Compile Include="MapComponent.fs"/>
+    <Compile Include="UserMap.fs"/>
+    <Compile Include="Login.fs"/>
     <Compile Include="App.fs"/>
   </ItemGroup>
   <ItemGroup>
@@ -39,5 +45,6 @@
     <PackageReference Include="Fable.Elmish.React" Version="3.0.1"/>
     <PackageReference Include="Fable.Fetch" Version="2.2.0"/>
     <PackageReference Include="Thoth.Json" Version="4.1.0"/>
+    <PackageReference Include="Fable.SimpleHttp" Version="3.0.0"/>
   </ItemGroup>
 </Project>

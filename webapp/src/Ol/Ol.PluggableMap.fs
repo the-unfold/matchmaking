@@ -1,5 +1,6 @@
 namespace Ol.PluggableMap
 
+open Browser.Types
 open Fable.Core
 open Ol.Object
 open Ol.Events
@@ -8,6 +9,8 @@ open Ol.Pixel
 
 type PluggableMap =
     inherit BaseObject
+
+    abstract setTarget: Element -> unit
 
 [<StringEnum>]
 type PluggableMapEventTypes =
