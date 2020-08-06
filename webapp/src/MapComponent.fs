@@ -8,6 +8,10 @@ open Fable.React.Props
 
 open Ol.Map
 open Ol.PluggableMap.PluggableMapExtentions
+open Ol.Layer.Tile
+open Ol.Layer.Vector
+open Ol.View
+open Ol.Source.Vector
 open OlImport
 open Common
 
@@ -18,15 +22,20 @@ type Props = {
 
 let initMap lonLat zoom =
     // creating a basic map
-    let vectorSource = vectorSourceStatic.Create !!{| wrapX = false |}
-
-
+    let vectorSourceOptions = jsOptions<VectorSourceOptions>(fun x -> x.wrapX <- false)
+    let vectorSource = vectorSourceStatic.Create vectorSourceOptions
+    let tileLayerOptions = jsOptions<TileLayerOptions>(fun x -> x.source <- osmStatic.Create ()) // {source: new OSM()}
+    let vectorLayerOptions = jsOptions<VectorLayerOptions>(fun x -> x.source <- vectorSource)
+    let viewOptions = jsOptions<ViewOptions>(fun x -> 
+        x.center <- (lonLat.Lon, lonLat.Lat)
+        x.zoom <- zoom
+    )
     let mapOptions = jsOptions<MapOptions>(fun x ->
         x.layers <- [| 
-            tileLayerStatic.Create !!{|source = osmStatic.Create ()|} // {source: new OSM()}
-            vectorLayerStatic.Create !!{|source = vectorSource|} 
+            tileLayerStatic.Create tileLayerOptions 
+            vectorLayerStatic.Create vectorLayerOptions 
         |]
-        x.view <- viewStatic.Create !!{|center = fromLonLat (lonLat.Lon, lonLat.Lat); zoom = zoom|})
+        x.view <- viewStatic.Create viewOptions)
 
     let theMap = mapStatic.Create mapOptions
     // let draw = drawStatic.Create !!{|source = vectorSource; ``type``= Point|}

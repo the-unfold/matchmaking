@@ -52,7 +52,7 @@ let circleStatic: CircleStatic = jsNative
 
 [<Import("fromLonLat", "ol/proj")>]
 /// Transforms a coordinate from longitude/latitude to a different projection.
-let fromLonLat: float * float -> Coordinate = jsNative
+let FromLonLat: float * float -> Coordinate = jsNative
 
 [<Import("toLonLat", "ol/proj")>]
 /// Transforms a coordinate to longitude/latitude.

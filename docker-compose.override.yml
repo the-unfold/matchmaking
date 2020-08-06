@@ -12,7 +12,7 @@ services:
       - /dev-app/src/bin/ # exclude
       - /dev-app/src/obj/ # exclude
     ports:
-      - '80:80'
+      - '8080:8080'
   api:
     # выполнить `docker-compose build webapp` при переходе в `dev режим` или изменении зависимостей
     build: 

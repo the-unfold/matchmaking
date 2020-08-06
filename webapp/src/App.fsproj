@@ -3,6 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="OidcClient/OidcClient.fs"/>
     <Compile Include="Ol/Ol.fs"/>
     <Compile Include="Ol/Ol.Pixel.fs"/>
     <Compile Include="Ol/Ol.Coordinate.fs"/>
