@@ -24,13 +24,15 @@ services:
     networks:
       - app-network
     environment:
-      - ASPNETCORE_URLS=http://0.0.0.0:5000
+      - ASPNETCORE_URLS=http://+:5000;
     
   auth:
     build:
       context: auth
     networks:
       - app-network
+    environment:
+      - ASPNETCORE_URLS=http://+:5000;
 
   postgis:
     build:

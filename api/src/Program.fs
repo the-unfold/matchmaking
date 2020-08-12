@@ -138,7 +138,7 @@ let errorHandler (ex : Exception) (logger : ILogger) =
 // ---------------------------------
 
 let configureCors (builder : CorsPolicyBuilder) =
-    builder.WithOrigins("")
+    builder.AllowAnyOrigin()
            .AllowAnyMethod()
            .AllowAnyHeader()
            |> ignore
@@ -158,10 +158,10 @@ let configureServices (services : IServiceCollection) =
     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(fun options ->
             options.RequireHttpsMetadata <- false // need to figure out the correct way to set up ssl to remove this
-            options.Authority <- "http://localhost:6000" // and use https here
-            options.TokenValidationParameters <- TokenValidationParameters (
+            options.Authority <- "http://auth:5000" // and use https here
+            options.TokenValidationParameters <- TokenValidationParameters(
                 ValidateAudience = false
-            ) 
+            )    
         ) |> ignore
 
     services.AddAuthorization(fun options -> 

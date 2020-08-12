@@ -9,6 +9,6 @@ FROM mcr.microsoft.com/dotnet/core/runtime-deps:3.1.3-alpine3.11
 
 COPY --from=builder /build/bin/Release/netcoreapp3.1/linux-musl-x64/publish /app
 
-EXPOSE 6000
+EXPOSE 5000
 
 CMD ["/app/auth"]
