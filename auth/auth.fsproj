@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Models/LoginModel.fs"/>
+    <Compile Include="Data/AuthDbContext.fs"/>
+    <Compile Include="Data/DatabaseInitializer.fs"/>
     <Compile Include="Controllers/AccountController.fs"/>
     <Compile Include="Controllers/LoginController.fs"/>
     <Compile Include="Program.fs"/>
@@ -12,5 +14,9 @@
     <PackageReference Include="IdentityServer4" Version="4.0.2"/>
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0"/>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.6"/>
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0"/>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.6"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.6"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="3.1.6"/>
   </ItemGroup>
 </Project>

@@ -259,7 +259,9 @@ let showRadius _ (x: Area) =
 
 
 
-let render (state: State) (dispatch: Msg -> unit) =
+let render: State -> (Msg -> unit) -> ReactElement = 
+    fun state dispatch ->
+    
     div [] [
         match state.CurrentPage with
         | Page.Login -> 
@@ -268,55 +270,55 @@ let render (state: State) (dispatch: Msg -> unit) =
             UserMap.render state.UserMap (UserMapMsg >> dispatch)
     ]
 
-let view model dispatch =
-    div [] [
-        // ofType<UserMap.Map,_,_> { center = {Lon = 82.921733; Lat = 55.029910}; zoom = 14.0 } []
-        div [] [
-            span [] [ 
-                model.area 
-                |> Option.fold showPosition "No location"
-                |> str 
-            ]
-        ]
-        div [] [
-            label [] [ model.area |> Option.fold showRadius "" |> str ]
-            br []
-            input [ 
-                Type "range"; 
-                Min 0.1; 
-                Max 5; 
-                Step 0.1;
-                Class "slider-default";
-                Style [Width "400px"]
-                // OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadius |> dispatch) 
-            ]
-        ]
-        div [] [
-            label [] [ if model.foundUsers.Length > 0 then str "Users nearby:" else str "You're alone..."]
-        ]
-        div [] [
-            ol [] [
-                for u in model.foundUsers -> li [] [ str u ]
-            ]
-        ]
-        div [] [
-            button [ 
-                // OnClick (fun _ -> dispatch GetUsers)
-            ] [ 
-                str "Show All Users" 
-            ]
-        ]
-        div [] [
-            button [
-                OnClick (fun _ -> dispatch GetTestMessage)
-            ] [
-                str "Text"
-            ]
-        ]
-        div [] [
-            label [] [ str model.text ]
-        ]
-    ]
+// let view model dispatch =
+//     div [] [
+//         // ofType<UserMap.Map,_,_> { center = {Lon = 82.921733; Lat = 55.029910}; zoom = 14.0 } []
+//         div [] [
+//             span [] [ 
+//                 model.area 
+//                 |> Option.fold showPosition "No location"
+//                 |> str 
+//             ]
+//         ]
+//         div [] [
+//             label [] [ model.area |> Option.fold showRadius "" |> str ]
+//             br []
+//             input [ 
+//                 Type "range"; 
+//                 Min 0.1; 
+//                 Max 5; 
+//                 Step 0.1;
+//                 Class "slider-default";
+//                 Style [Width "400px"]
+//                 // OnChange (fun x -> x.Value |> float |> fun x -> x * 1.0<km> |> SetRadius |> dispatch) 
+//             ]
+//         ]
+//         div [] [
+//             label [] [ if model.foundUsers.Length > 0 then str "Users nearby:" else str "You're alone..."]
+//         ]
+//         div [] [
+//             ol [] [
+//                 for u in model.foundUsers -> li [] [ str u ]
+//             ]
+//         ]
+//         div [] [
+//             button [ 
+//                 // OnClick (fun _ -> dispatch GetUsers)
+//             ] [ 
+//                 str "Show All Users" 
+//             ]
+//         ]
+//         div [] [
+//             button [
+//                 OnClick (fun _ -> dispatch GetTestMessage)
+//             ] [
+//                 str "Text"
+//             ]
+//         ]
+//         div [] [
+//             label [] [ str model.text ]
+//         ]
+//     ]
 
 // let mapClickToDefaultArea (evt: MapBrowserEvent) =
 //     {

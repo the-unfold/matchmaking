@@ -1,12 +1,15 @@
 namespace Auth
 
 open Microsoft.AspNetCore.Hosting
+open Microsoft.AspNetCore.Identity
+open Microsoft.EntityFrameworkCore
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.DependencyInjection
 open IdentityServer4.Models
+open Auth.Data
 
 module Configuration =
     let getClients () =
@@ -29,7 +32,7 @@ module Configuration =
 
     let getApiResources () =
         [
-            ApiResource("api", "Main bakcend API")
+            ApiResource("api", "Main backend API")
         ]
     
 
@@ -37,6 +40,8 @@ module Configuration =
         [
             IdentityResources.OpenId () :> IdentityResource
             IdentityResources.Profile () :> IdentityResource
+
+            IdentityResources.Email () :> IdentityResource
         ]
 
     let getApiScopes () =
@@ -48,6 +53,17 @@ module Program =
 
     let configureServices (services: IServiceCollection): unit =
         
+        services.AddDbContext<AuthDbContext>(
+            fun config -> 
+            config.UseInMemoryDatabase("MEMORY") |> ignore
+        ).AddIdentity<IdentityUser, IdentityRole>(
+            fun config ->
+            config.Password.RequireDigit <- false
+            config.Password.RequireLowercase <- false
+            config.Password.RequireNonAlphanumeric <- false
+            config.Password.RequireUppercase <- false
+            config.Password.RequiredLength <- 4
+        ).AddEntityFrameworkStores<AuthDbContext>() |> ignore
 
         services.AddIdentityServer()
             .AddInMemoryApiScopes(Configuration.getApiScopes())
@@ -77,12 +93,18 @@ module Program =
 
     [<EntryPoint>]
     let main args =
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(fun webBuilder -> 
+        let host = 
+            Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(
+                fun webBuilder -> 
                 webBuilder
                     .Configure(configureApp)
-                    .ConfigureServices(configureServices) |> ignore)
-            .Build()
-            .Run()
+                    .ConfigureServices(configureServices) |> ignore
+            ).Build()
         
+        using (host.Services.CreateScope()) (
+            fun scope -> 
+            DatabaseInitializer.Init scope.ServiceProvider
+        )
+
+        host.Run()
         0
