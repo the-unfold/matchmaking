@@ -200,14 +200,14 @@ module App =
 
 
 
-    let update (msg: Msg) (state: State) =
+    let update (msg: Msg) (state: State): State * Cmd<Msg> =
         match msg with
-        | LoginMsg msg -> 
-            let loginState, loginCmd = Login.update msg state.Login
-            { state with Login = loginState}, loginCmd
-        | UserMapMsg msg -> 
-            let userMapState, userMapCmd = UserMap.update msg state.UserMap
-            { state with UserMap = userMapState}, userMapCmd
+        | LoginMsg loginMsg -> 
+            let loginState, loginCmd = Login.update loginMsg state.Login
+            { state with Login = loginState}, Cmd.map LoginMsg loginCmd
+        | UserMapMsg userMapMsg -> 
+            let userMapState, userMapCmd = UserMap.update userMapMsg state.UserMap
+            { state with UserMap = userMapState}, Cmd.map UserMapMsg userMapCmd
         // | SetArea a -> 
         //     { model with area = Some a }, 
         //     Cmd.batch [

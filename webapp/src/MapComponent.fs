@@ -27,7 +27,7 @@ let initMap lonLat zoom =
     let tileLayerOptions = jsOptions<TileLayerOptions>(fun x -> x.source <- osmStatic.Create ()) // {source: new OSM()}
     let vectorLayerOptions = jsOptions<VectorLayerOptions>(fun x -> x.source <- vectorSource)
     let viewOptions = jsOptions<ViewOptions>(fun x -> 
-        x.center <- (lonLat.Lon, lonLat.Lat)
+        x.center <- fromLonLat (lonLat.Lon, lonLat.Lat)
         x.zoom <- zoom
     )
     let mapOptions = jsOptions<MapOptions>(fun x ->
@@ -42,12 +42,12 @@ let initMap lonLat zoom =
 
     theMap
 
-let olMap = initMap {Lon = 82.921733; Lat = 55.029910} 14.0
+// let olMap = initMap {Lon = 82.921733; Lat = 55.029910} 14.0
 // olMap.setTarget(document.getElementById("map"))
 
 type MapComponent(props) =
     inherit Component<Props, obj>(props)
-    do base.setInitState(props)
+    // do base.setInitState(props)
 
     let olMap = initMap props.center props.zoom
 

@@ -39,13 +39,13 @@ module Configuration =
                 ClientId = "client_id",
                 ClientSecrets = [| Secret("secret".Sha256()) |],
                 AllowedGrantTypes = GrantTypes.ClientCredentials,
-                AllowedScopes = [| "api" |]
+                AllowedScopes = [| "api"; "openid"; "email"; "profile" |]
             )
             Client(
                 ClientId = "webapp",
                 ClientSecrets = [| Secret("secret".Sha256()) |],
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-                AllowedScopes = [| "api" |]
+                AllowedScopes = [| "api"; "openid"; "email"; "profile" |]
             )
         }
 
@@ -53,6 +53,7 @@ module Configuration =
         seq {
             IdentityResources.OpenId()
             IdentityResources.Profile()
+            IdentityResources.Email()
         }
 
     let getApiScopes(): seq<ApiScope> =
