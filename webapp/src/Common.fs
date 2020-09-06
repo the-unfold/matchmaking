@@ -25,3 +25,9 @@ type Area = {
     Center: LonLat
     Radius: Radius
 }
+
+type User = {
+    Sub: string
+    Name: string
+    Email: string
+}

@@ -36,7 +36,9 @@
     <Compile Include="OlImport.fs"/>
     <Compile Include="Common.fs"/>
     <Compile Include="Utils.fs"/>
+    <Compile Include="AsyncResult.fs"/>
     <Compile Include="MapComponent.fs"/>
+    <Compile Include="Navbar.fs"/>
     <Compile Include="UserMap.fs"/>
     <Compile Include="Login.fs"/>
     <Compile Include="App.fs"/>

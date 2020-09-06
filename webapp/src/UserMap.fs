@@ -1,5 +1,6 @@
+
 [<RequireQualifiedAccess>]
-module UserMap
+module UserMap 
 
 open Browser.Dom
 open Browser.Types
@@ -20,24 +21,31 @@ open Common
 open Utils
 open MapComponent
 
+
 type State = {
     Area: Area option
+    User: User
+    Navbar: Navbar.State
 }
 
 type Msg = 
+    | NavbarMsg of Navbar.Msg
     | AreaSet of Area
 
-let init () =
-    { Area = None }, Cmd.none
+let init (user: User) =
+    let navbarState, navbarCmd = Navbar.init user
+    { Area = None; User = user; Navbar = navbarState }, Cmd.none
    
 let update (msg: Msg) (state: State) =
     match msg with 
     | AreaSet _ -> state, Cmd.none
+    | _ -> state, Cmd.none
 
 let render (state: State) (dispatch: Msg -> unit) =
-    // div [] [
+    div [] [
+        Navbar.render state.Navbar (NavbarMsg >> dispatch)
         ofType<MapComponent,_,_> { center = {Lon = 82.921733; Lat = 55.029910}; zoom = 14.0 } []
-    // ]   
+    ]   
 // type State = {
 //     area: Area option
 //     areaFeatures: AreaFeatures option
