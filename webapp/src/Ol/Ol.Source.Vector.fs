@@ -8,9 +8,10 @@ type VectorSource =
     inherit Source
 
     abstract addFeature: Feature -> unit
-    abstract addFeatures: Feature list -> unit
+    abstract addFeatures: Feature array -> unit
 
     abstract removeFeature: Feature -> unit
+    abstract clear: fast:bool -> unit
 
 type VectorSourceOptions =
     abstract wrapX: bool with get, set

@@ -9,6 +9,12 @@ type LonLat = {
     Lon: float
     Lat: float
 }
+
+let lonLatFromTuple t =
+    {Lon = fst t; Lat = snd t}
+
+let lonLatToTuple x =
+    (x.Lon, x.Lat)
 //  with
 //     static member Decoder: Decoder<Position> =
 //         Decode.map2 
