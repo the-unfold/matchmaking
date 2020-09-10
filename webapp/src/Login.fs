@@ -43,7 +43,7 @@ let inline decodeResponse<'T> response =
         | 200, t -> Decode.Auto.fromString<'T> (t, caseStrategy=SnakeCase)
         | _, t -> Error t
 
-
+let a = TokenType ""
 
 let logIn (login, password) =
     let data = 

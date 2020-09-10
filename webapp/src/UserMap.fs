@@ -20,7 +20,7 @@ type State = {
 }
 
 type Msg = 
-    | NavbarMsg of Navbar.Msg
+    // | NavbarMsg of Navbar.Msg
     | MapMsg of MapComponentMsg
     | Increment
 
@@ -30,14 +30,14 @@ let init (user: User) =
    
 let update (msg: Msg) (state: State) =
     match msg with 
-    | NavbarMsg _ -> state, Cmd.none
+    // | NavbarMsg _ -> state, Cmd.none
     | MapMsg (Clicked x) -> {state with Areas = {Center = x; Radius = 2.2<km>}::state.Areas}, Cmd.none
     | Increment -> {state with Count = state.Count + 1}, Cmd.none
 
 let render (state: State) (dispatch: Msg -> unit) =
     // let m = state.Areas |> List.map (fun a -> ofFloat a.Center.Lon) |> List.toSeq
     div [] [
-        Navbar.render state.Navbar (NavbarMsg >> dispatch)
+        // Navbar.render state.Navbar (NavbarMsg >> dispatch)
         FunctionComponent.Of(mapComponentFn) 
             { center = {Lon = 82.921733; Lat = 55.029910}; 
               zoom = 14.0; 

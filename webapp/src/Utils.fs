@@ -9,6 +9,8 @@ type AsyncOperationStatus<'t> =
     | Started
     | Finished of 't
 
+let const' a _ = a
+
 module AsyncResult =
     let map f ar = async {
         let! r = ar

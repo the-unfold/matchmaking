@@ -40,6 +40,7 @@
     <Compile Include="Navbar.fs" />
     <Compile Include="UserMap.fs" />
     <Compile Include="Login.fs" />
+    <Compile Include="Event.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
