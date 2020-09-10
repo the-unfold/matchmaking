@@ -36,4 +36,19 @@ type User = {
     Sub: string
     Name: string
     Email: string
+    Image: string option
+}
+
+type Tag = Tag of string
+type Url = Url of string
+type EventLocation = GeographicLocation of LonLat | EventUrl of Url
+
+type Event = {
+    Title: string
+    Description: string
+    Location: EventLocation
+    DateTime: System.DateTime
+    Tags: Tag list
+    Organizers: User list
+    Attendees: User list
 }

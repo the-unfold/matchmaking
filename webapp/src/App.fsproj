@@ -36,10 +36,14 @@
     <Compile Include="OlImport.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="UserComponent.fs" />
+    <Compile Include="AutocompleteComponent.fs" />
     <Compile Include="MapComponent.fs" />
     <Compile Include="Navbar.fs" />
     <Compile Include="UserMap.fs" />
     <Compile Include="Login.fs" />
+    <Compile Include="EventsList.fs" />
+    <Compile Include="Event.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
