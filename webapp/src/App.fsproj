@@ -33,6 +33,7 @@
     <Compile Include="Ol/Ol.View.fs" />
     <Compile Include="Ol/Ol.PluggableMap.fs" />
     <Compile Include="Ol/Ol.Map.fs" />
+    <Compile Include="Stylesheet.fs" />
     <Compile Include="OlImport.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Utils.fs" />

@@ -26,9 +26,9 @@ let update (msg: Msg) (state: State) =
 
 
 let render (state: State) (dispatch: Msg -> unit) =
-    div [Class "navbar"] [
+    div [Class "row content-sb navbar"] [
         div [] [
-            button [OnClick (fun _ -> dispatch EventsNavTriggered)] [ str "Events" ]
+            button [Class "btn-default"; OnClick (fun _ -> dispatch EventsNavTriggered)] [ str "Events" ]
         ]
         div [] [
             str "Hello " 

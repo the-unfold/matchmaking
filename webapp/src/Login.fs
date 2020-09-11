@@ -139,16 +139,21 @@ let update (msg: Msg) (state: State): State * Cmd<Msg> =
 
 let render (state: State) (dispatch: Msg -> unit) =
     div [] [
-        div [] [
-            label [] [ str "Login" ]
-            input [ OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
-        ]
-        div [] [
-            label [] [ str "Password" ]
-            input [ 
-                Type "password" 
-                OnChange (fun e -> e.Value |> PasswordTextChanged |> dispatch)
+        div [Class "row mb-md"] [
+            div [Class "column mr-md"] [
+                label [ Class "label-default mb-md" ] [ str "Login" ]
+                input [ Class "input-default"; OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
+            ]
+            div [Class "column mr-md"] [
+                label [ Class "label-default mb-md" ] [ str "Password" ]
+                input [ 
+                    Class "input-default"
+                    Type "password" 
+                    OnChange (fun e -> e.Value |> PasswordTextChanged |> dispatch)
+                ]
             ]
         ]
-        button [ OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
+        div [] [
+            button [ Class "btn-default"; OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
+        ]
     ]

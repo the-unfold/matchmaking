@@ -1,5 +1,7 @@
 module Utils
 
+open System.Text.RegularExpressions
+
 type Deferred<'t> =
     | NotStarted
     | InProgress
@@ -10,6 +12,22 @@ type AsyncOperationStatus<'t> =
     | Finished of 't
 
 let const' a _ = a
+
+let (|Regex|_|) pattern input =
+    let m = Regex.Match(input, pattern)
+    if m.Success then Some(m.Value) else None
+
+[<RequireQualifiedAccess>]
+module Validate =
+    let required errMsg x =
+        match x with
+        | "" -> Error errMsg
+        | _ -> Ok x
+
+    let url errMsg x =
+        match x with
+        | Regex @"^https?://[^\s/$.?#].[^\s]*$" url -> Ok url
+        | _ -> Error errMsg
 
 module AsyncResult =
     let map f ar = async {

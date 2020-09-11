@@ -11,12 +11,13 @@ module App =
     open Elmish.React
     open Fetch
     open Thoth.Json 
-
+    
     open Utils
     open Common
 
     // importing OpenLayers js library using F# type mappings
     importAll "ol/ol.css"
+    Stylesheet.apply "./styles/app.scss" 
 
     [<RequireQualifiedAccess>]
     type Page =
