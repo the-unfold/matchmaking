@@ -29,6 +29,12 @@ module Validate =
         | Regex @"^https?://[^\s/$.?#].[^\s]*$" url -> Ok url
         | _ -> Error errMsg
 
+    let dateTime errMsg x =
+        match System.DateTime.TryParse x with
+        | true, r -> Ok r
+        | _ -> Error errMsg
+
+
 module AsyncResult =
     let map f ar = async {
         let! r = ar
@@ -54,3 +60,14 @@ module AsyncResult =
 [<AutoOpen>]
 module AsyncResultExpressionBuilder =
     let asyncResult = new AsyncResult.AsyncResultBuilder()
+
+[<RequireQualifiedAccess>]
+module Image = 
+    open Fable.Core.JsInterop
+    let inline load (relativePath: string) : string = importDefault relativePath
+
+
+[<RequireQualifiedAccess>]
+module Stylesheet =
+    open Fable.Core.JsInterop
+    let inline apply (relativePath: string) : unit = importSideEffects relativePath

@@ -26,12 +26,11 @@ let update (msg: Msg) (state: State) =
 
 
 let render (state: State) (dispatch: Msg -> unit) =
-    div [Class "row content-sb navbar"] [
+    div [Class "row content-sb align-center navbar"] [
         div [] [
-            button [Class "btn-default"; OnClick (fun _ -> dispatch EventsNavTriggered)] [ str "Events" ]
+            span [Class "nav-item"; OnClick (fun _ -> dispatch EventsNavTriggered)] [ str "Events" ]
         ]
         div [] [
-            str "Hello " 
-            str state.User.Name
+            FunctionComponent.Of UserComponent.view {User = state.User}
         ]
     ]

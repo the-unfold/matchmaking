@@ -141,19 +141,19 @@ let render (state: State) (dispatch: Msg -> unit) =
     div [] [
         div [Class "row mb-md"] [
             div [Class "column mr-md"] [
-                label [ Class "label-default mb-md" ] [ str "Login" ]
-                input [ Class "input-default"; OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
+                label [ Class "label-std mb-md" ] [ str "Login" ]
+                input [ Class "input-std"; OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
             ]
             div [Class "column mr-md"] [
-                label [ Class "label-default mb-md" ] [ str "Password" ]
+                label [ Class "label-std mb-md" ] [ str "Password" ]
                 input [ 
-                    Class "input-default"
+                    Class "input-std"
                     Type "password" 
                     OnChange (fun e -> e.Value |> PasswordTextChanged |> dispatch)
                 ]
             ]
         ]
         div [] [
-            button [ Class "btn-default"; OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
+            button [ Class "btn-std"; OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
         ]
     ]
