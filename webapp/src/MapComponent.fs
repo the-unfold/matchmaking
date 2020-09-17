@@ -1,3 +1,4 @@
+[<RequireQualifiedAccess>]
 module MapComponent
 
 open Browser.Dom
@@ -16,17 +17,18 @@ open Ol.Source.Vector
 open OlImport
 open Common
 
-type MapComponentMsg =
+type Msg =
     | Clicked of LonLat
 
-type MapComponentProps = { 
+type Props = { 
     center: LonLat 
     zoom: float
-    dispatch: MapComponentMsg -> unit
+    dispatch: Msg -> unit
     areas: Area list
 }
 
-let initMap lonLat zoom =
+
+let private initMap lonLat zoom =
     // creating a basic map
     let vectorSourceOptions = jsOptions<VectorSourceOptions>(fun x -> x.wrapX <- false)
     let vectorSource = vectorSourceStatic.Create vectorSourceOptions
@@ -55,8 +57,7 @@ let initMap lonLat zoom =
 //     abs (a.center.Lat - b.center.Lat) > 0.00000001 ||
 //     abs (a.zoom - b.zoom) > 0.0001
 
-
-let mapComponentFn (props: MapComponentProps) = 
+let view (props: Props) = 
     let mapRef = Hooks.useRef (initMap props.center props.zoom)
     let mapElementRef = Hooks.useRef None
     Hooks.useEffect((fun () -> 

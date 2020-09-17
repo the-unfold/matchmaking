@@ -43,7 +43,7 @@ let inline decodeResponse<'T> response =
         | 200, t -> Decode.Auto.fromString<'T> (t, caseStrategy=SnakeCase)
         | _, t -> Error t
 
-
+let a = TokenType ""
 
 let logIn (login, password) =
     let data = 
@@ -139,16 +139,21 @@ let update (msg: Msg) (state: State): State * Cmd<Msg> =
 
 let render (state: State) (dispatch: Msg -> unit) =
     div [] [
-        div [] [
-            label [] [ str "Login" ]
-            input [ OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
-        ]
-        div [] [
-            label [] [ str "Password" ]
-            input [ 
-                Type "password" 
-                OnChange (fun e -> e.Value |> PasswordTextChanged |> dispatch)
+        div [Class "row mb-md"] [
+            div [Class "column mr-md"] [
+                label [ Class "label-std mb-md" ] [ str "Login" ]
+                input [ Class "input-std"; OnChange (fun e -> e.Value |> LoginTextChanged |> dispatch) ]
+            ]
+            div [Class "column mr-md"] [
+                label [ Class "label-std mb-md" ] [ str "Password" ]
+                input [ 
+                    Class "input-std"
+                    Type "password" 
+                    OnChange (fun e -> e.Value |> PasswordTextChanged |> dispatch)
+                ]
             ]
         ]
-        button [ OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
+        div [] [
+            button [ Class "btn-std"; OnClick (fun _ -> dispatch (Login Started))] [ str "Login" ]
+        ]
     ]

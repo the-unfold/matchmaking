@@ -10,8 +10,6 @@ open Elmish.React
 open Common
 open Utils
 
-open MapComponent
-
 type State = {
     Areas: Area list
     User: User
@@ -20,8 +18,8 @@ type State = {
 }
 
 type Msg = 
-    | NavbarMsg of Navbar.Msg
-    | MapMsg of MapComponentMsg
+    // | NavbarMsg of Navbar.Msg
+    | MapMsg of MapComponent.Msg
     | Increment
 
 let init (user: User) =
@@ -30,15 +28,15 @@ let init (user: User) =
    
 let update (msg: Msg) (state: State) =
     match msg with 
-    | NavbarMsg _ -> state, Cmd.none
-    | MapMsg (Clicked x) -> {state with Areas = {Center = x; Radius = 2.2<km>}::state.Areas}, Cmd.none
+    // | NavbarMsg _ -> state, Cmd.none
+    | MapMsg (MapComponent.Clicked x) -> {state with Areas = {Center = x; Radius = 2.2<km>}::state.Areas}, Cmd.none
     | Increment -> {state with Count = state.Count + 1}, Cmd.none
 
 let render (state: State) (dispatch: Msg -> unit) =
     // let m = state.Areas |> List.map (fun a -> ofFloat a.Center.Lon) |> List.toSeq
     div [] [
-        Navbar.render state.Navbar (NavbarMsg >> dispatch)
-        FunctionComponent.Of(mapComponentFn) 
+        // Navbar.render state.Navbar (NavbarMsg >> dispatch)
+        FunctionComponent.Of(MapComponent.view) 
             { center = {Lon = 82.921733; Lat = 55.029910}; 
               zoom = 14.0; 
               areas = state.Areas; 
