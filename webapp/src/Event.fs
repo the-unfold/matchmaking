@@ -125,8 +125,6 @@ let update (msg: Msg) (state: State): State * Cmd<Msg> =
     | SaveTriggered -> { state with IsFormDirty = true }, Cmd.none
     | BackTriggered -> state, Cmd.none
 
-let tempTags = ["F#"; "Haskell"; "OhMyGod"; "Scala"; "Elm"; "Abracadabra"]
-
 let render (state: State) (dispatch: Msg -> unit) = 
     div [Class "pa-lg page-std"] [
         img [Class "event-image"; Src (Image.load "./assets/event-image-placeholder.svg")]
@@ -181,7 +179,7 @@ let render (state: State) (dispatch: Msg -> unit) =
                 div [Class "column"] [
                     label [Class "label-std"] [ str "Search Tags" ]
                     FunctionComponent.Of(AutocompleteComponent.view) {
-                        Items = tempTags
+                        Items = AutocompleteComponent.ItemsUrl "/api/tags"
                         OnItemSelected = Tag >> TagAdded >> dispatch }
                 ]
 

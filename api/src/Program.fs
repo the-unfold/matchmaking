@@ -30,8 +30,6 @@ type Position = {
 type User = {
     Id: int
     Name: string
-    Location: Position
-    Radius: float
 }
 
 let parsePosition json: Position =
@@ -47,23 +45,37 @@ let connection =
 let getUsers() =
     connection
     |> Sql.connectFromConfig
-    |> Sql.query "SELECT id, name, ST_AsGeoJson(location) as loc, radius FROM users"
+    |> Sql.query "SELECT id, name FROM users"
     |> Sql.execute (fun read -> {
         Id = read.int "id"
         Name = read.text "name"
-        Location =  "loc" |> read.text |> parsePosition
-        Radius = read.double "radius"
     })
+    // |> Sql.query "SELECT id, name, ST_AsGeoJson(location) as loc, radius FROM users"
+    // |> Sql.execute (fun read -> {
+    //     Id = read.int "id"
+    //     Name = read.text "name"
+    //     Location =  "loc" |> read.text |> parsePosition
+    //     Radius = read.double "radius"
+    // })
 
-let getUsersInArea (lon: float) (lat: float) (rad: float) =
+// let getUsersInArea (lon: float) (lat: float) (rad: float) =
+//     connection
+//     |> Sql.connectFromConfig
+//     |> Sql.query "SELECT name FROM users WHERE ST_Intersects(
+//         st_buffer(ST_GeographyFromText(@point), @rad), 
+//         st_buffer(users.location, users.radius))"
+//     |> Sql.parameters [
+//         ("point", Sql.string (sprintf "POINT(%f %f)" lon lat))
+//         ("rad", Sql.double rad) ]
+//     |> Sql.execute (fun read -> read.string "name")
+
+let getTags query=
     connection
     |> Sql.connectFromConfig
-    |> Sql.query "SELECT name FROM users WHERE ST_Intersects(
-        st_buffer(ST_GeographyFromText(@point), @rad), 
-        st_buffer(users.location, users.radius))"
+    |> Sql.query "SELECT name FROM tags WHERE name ILIKE @query;"
     |> Sql.parameters [
-        ("point", Sql.string (sprintf "POINT(%f %f)" lon lat))
-        ("rad", Sql.double rad) ]
+        ("query", Sql.string (sprintf "%%%s%%" query))
+    ]
     |> Sql.execute (fun read -> read.string "name")
 
 let handleGetHello =
@@ -91,15 +103,26 @@ let handleGetUsers =
             return! Giraffe.ResponseWriters.json users next ctx
         }
 
-let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
+// let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
+//     fun (next: HttpFunc) (ctx: HttpContext) ->
+//         task {
+//             let users = 
+//                 match getUsersInArea lon lat rad with
+//                 | Result.Ok us -> us
+//                 | Result.Error e -> raise e
+
+//             return! Giraffe.ResponseWriters.json users next ctx
+//         }
+
+let handleGetTags query =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
-            let users = 
-                match getUsersInArea lon lat rad with
-                | Result.Ok us -> us
+            let tags =
+                match getTags query with
+                | Ok tags -> tags
                 | Result.Error e -> raise e
 
-            return! Giraffe.ResponseWriters.json users next ctx
+            return! ResponseWriters.json tags next ctx
         }
 
 let handleGetSecured: HttpHandler =
@@ -121,7 +144,8 @@ let webApp =
                 route "/secured" >=> authorize >=> handleGetSecured
                 route "/api" >=> handleGetHelloApi
                 route "/users" >=> handleGetUsers
-                routef "/find-users/%f-%f-%f" handleFindUsers
+                routef "/tags/%s" handleGetTags
+                // routef "/find-users/%f-%f-%f" handleFindUsers
             ]
         setStatusCode 404 >=> text "Not Found" ]
 

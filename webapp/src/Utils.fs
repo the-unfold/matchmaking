@@ -1,5 +1,7 @@
 module Utils
 
+open Fable.SimpleHttp
+open Thoth.Json
 open System.Text.RegularExpressions
 
 type Deferred<'t> =
@@ -16,6 +18,11 @@ let const' a _ = a
 let (|Regex|_|) pattern input =
     let m = Regex.Match(input, pattern)
     if m.Success then Some(m.Value) else None
+
+let inline decodeResponse<'T> response =
+     match response.statusCode, response.responseText with
+        | 200, t -> Decode.Auto.fromString<'T> (t, caseStrategy=SnakeCase)
+        | _, t -> Error t
 
 [<RequireQualifiedAccess>]
 module Validate =

@@ -147,5 +147,4 @@ module App =
             console.error ex
         )
     |> Program.withConsoleTrace
-    // |> Program.withSubscription mapSub
     |> Program.run

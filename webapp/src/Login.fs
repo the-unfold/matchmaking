@@ -38,10 +38,6 @@ type Msg =
     | Login of AsyncOperationStatus<Result<TokenResponse, string>>
     | GetUser of AsyncOperationStatus<Result<User, string>>
 
-let inline decodeResponse<'T> response =
-     match response.statusCode, response.responseText with
-        | 200, t -> Decode.Auto.fromString<'T> (t, caseStrategy=SnakeCase)
-        | _, t -> Error t
 
 let a = TokenType ""
 

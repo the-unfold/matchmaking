@@ -6,15 +6,64 @@ IF NOT EXISTS postgis_topology;
 CREATE TABLE users
 (
   id SERIAL,
-  name text,
-  location geography,
-  radius numeric
+  name text NOT NULL,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 
 INSERT INTO users
-  (name, radius, location)
-values
-  ('John The Pastor на Заельцовской', 1000, ST_GeographyFromText('POINT(55.059474 82.912540)')),
-  ('Peter The Minister на Гагаринской', 1000, ST_GeographyFromText('POINT(55.050504 82.914907)')),
-  ('Sara The Doctor на Красном проспекте', 1000, ST_GeographyFromText('POINT(55.042302 82.917062)')),
-  ('Vasya The Student на Площади Ленина', 1000, ST_GeographyFromText('POINT(55.031043 82.920185)'));
+  (name)
+VALUES
+  ('Test User'),
+  ('John The Pastor'),
+  ('Peter The Minister на Гагаринской'),
+  ('Sara The Doctor на Красном проспекте'),
+  ('Vasya The Student на Площади Ленина');
+
+CREATE TABLE tags
+(
+  id SERIAL,
+  name text NOT NULL,
+  CONSTRAINT tags_pkey PRIMARY KEY (id)
+);
+
+INSERT INTO tags
+  (name)
+VALUES
+  ('OhMyGod'),
+  ('JavaScript'),
+  ('ES6'),
+  ('Abracadabra'),
+  ('Haskell'),
+  ('F#'),
+  ('Scala'),
+  ('Category theory'),
+  ('Functional Programming'),
+  ('Books'),
+  ('Rock-n-roll'),
+  ('Elm'),
+  ('Elmish'),
+  ('Typescript'),
+  ('Music'),
+  ('Drinking');
+
+CREATE TABLE events
+(
+    id SERIAL,
+    title text NOT NULL,
+    description text NOT NULL,
+    image_url text,
+    location_geo text,
+    location_url text,
+    date_time TIMESTAMP,
+    CONSTRAINT events_pkey PRIMARY KEY (id)
+)
+
+INSERT INTO events
+  (title, description, location_url, date_time)
+VALUES
+  (
+    'FP Specialty test event', 
+    'Мы профессиональная команда, нубы идут лесом.Без ссылки на твиттер не рассматриваем, вступление в группу только за взятку. Мы профессиональная команда, нубы идут лесом. Без ссылки на твиттер не рассматриваем, вступление в группу только за взятку. Мы профессиональная команда, нубы идут лесом. Без ссылки на твиттер не рассматриваем, вступление в группу только за взятку.', 
+    'https://us02web.zoom.us/j/81359006423', 
+    '2020-12-12 10:00'
+  )
