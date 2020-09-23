@@ -13,7 +13,7 @@ type Props = {
 
 let view (props: Props) =
     let userImage = 
-        match props.User.Image with
+        match props.User.ImageUrl with
         | Some img -> img
         | None -> Image.load "./assets/user-image-placeholder.jpg"
 

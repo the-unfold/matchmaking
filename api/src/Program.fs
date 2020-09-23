@@ -14,26 +14,47 @@ open Microsoft.IdentityModel.Tokens
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Npgsql.FSharp
-open Chiron
-let (<!>) = Chiron.Operators.(<!>)
+open Thoth.Json.Net
+// open Chiron
+// let (<!>) = Chiron.Operators.(<!>)
 
-type Position = {
-    Lat: float
-    Lon: float
-    } with 
+// type Position = {
+//     Lat: float
+//     Lon: float
+//     } with 
 
-    static member FromJson (_ : Position) = 
-            fun (lat, lon) -> { Lon = lon; Lat = lat }
-            <!> Json.read "coordinates"
+//     static member FromJson (_ : Position) = 
+//             fun (lat, lon) -> { Lon = lon; Lat = lat }
+//             <!> Json.read "coordinates"
 
 
 type User = {
-    Id: int
-    Name: string
+    id: int
+    auth_id: int
+    name: string
 }
 
-let parsePosition json: Position =
-    (Json.parse >> Json.deserialize) json
+type Tag = {
+    id: int
+    name: string
+    slug: string
+}
+
+type Event = {
+    id: int
+    title: string
+    description: string
+    image_url: string option
+    location_geo: string option
+    location_url: string option
+    date_time: System.DateTime
+    tags: Tag list
+    organizers: User list
+    attendees: User list
+}
+
+// let parsePosition json: Position =
+//     (Json.parse >> Json.deserialize) json
 
 let connection =
     Sql.host "postgis"
@@ -45,11 +66,77 @@ let connection =
 let getUsers() =
     connection
     |> Sql.connectFromConfig
-    |> Sql.query "SELECT id, name FROM users"
+    |> Sql.query "SELECT id, auth_id, name FROM users"
     |> Sql.execute (fun read -> {
-        Id = read.int "id"
-        Name = read.text "name"
+        id = read.int "id"
+        auth_id = read.int "auth_id"
+        name = read.text "name"
     })
+
+type GetEventsRow = {
+    id: int
+    title: string
+    description: string
+    image_url: string option
+    location_geo: string option
+    location_url: string option
+    date_time: System.DateTime
+    tag_id: int
+    tag_name: string
+    tag_slug: string
+}
+
+let eventFromRow r =
+    {
+        id = r.id
+        title = r.title
+        description = r.description
+        image_url = r.image_url
+        location_geo = r.location_geo
+        location_url = r.location_url
+        date_time = r.date_time
+        tags = []
+        organizers = []
+        attendees = [] 
+    }
+
+let tagFromRow r =
+    {
+        id = r.tag_id
+        name = r.tag_name
+        slug = r.tag_slug
+    }
+
+let getEvents () =
+    connection
+    |> Sql.connectFromConfig
+    |> Sql.query 
+        @"SELECT e.id, e.title, e.description, e.image_url, e.location_geo, e.location_url, e.date_time, t.id as tag_id, t.name as tag_name, t.slug as tag_slug
+         FROM events as e
+         JOIN event_tags ON e.id = event_tags.event_id
+         JOIN tags as t ON t.id = event_tags.tag_id "
+    |> Sql.execute (fun read -> {
+        id = read.int "id"
+        title = read.string "title"
+        description = read.string "description"
+        image_url = read.stringOrNone "image_url"
+        location_geo = read.stringOrNone "location_geo"
+        location_url = read.stringOrNone "location_url"
+        date_time = read.dateTime "date_time"
+        tag_id = read.int "tag_id"
+        tag_name = read.string "tag_name"
+        tag_slug = read.string "tag_slug"
+    })
+    |> Result.map (List.fold (fun result r -> 
+        match result with
+        | [] -> [eventFromRow r]
+        | e::xs when e.id = r.id -> 
+            {e with tags = tagFromRow r :: e.tags} :: xs
+        | e::xs -> 
+            eventFromRow r :: xs
+        ) [])
+
+    
     // |> Sql.query "SELECT id, name, ST_AsGeoJson(location) as loc, radius FROM users"
     // |> Sql.execute (fun read -> {
     //     Id = read.int "id"
@@ -69,30 +156,42 @@ let getUsers() =
 //         ("rad", Sql.double rad) ]
 //     |> Sql.execute (fun read -> read.string "name")
 
+let getUserByAuth authId =
+    connection
+    |> Sql.connectFromConfig
+    |> Sql.query "SELECT id, auth_id, name FROM users WHERE auth_id = @auth_id"
+    |> Sql.parameters [
+        ("auth_id", Sql.int authId)]
+    |> Sql.executeRow (fun read -> {
+        id = read.int "id"
+        auth_id = read.int "auth_id"
+        name = read.text "name"
+    })
+
 let getTags query=
     connection
     |> Sql.connectFromConfig
     |> Sql.query "SELECT name FROM tags WHERE name ILIKE @query;"
     |> Sql.parameters [
-        ("query", Sql.string (sprintf "%%%s%%" query))
-    ]
+        ("query", Sql.string (sprintf "%%%s%%" query))]
     |> Sql.execute (fun read -> read.string "name")
 
-let handleGetHello =
+
+let handleGetHello: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let response = "Hello there!"
             return! Giraffe.ResponseWriters.json response next ctx
         }
 
-let handleGetHelloApi =
+let handleGetHelloApi: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let response = "Hello Api!"
             return! Giraffe.ResponseWriters.json response next ctx
         }
 
-let handleGetUsers =
+let handleGetUsers: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let users = 
@@ -103,6 +202,16 @@ let handleGetUsers =
             return! Giraffe.ResponseWriters.json users next ctx
         }
 
+let handleGetUserByAuth authId: HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            let user = 
+                match getUserByAuth authId with
+                | Result.Ok u -> u
+                | Result.Error e -> raise e
+
+            return! Giraffe.ResponseWriters.json user next ctx
+        }
 // let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
 //     fun (next: HttpFunc) (ctx: HttpContext) ->
 //         task {
@@ -114,7 +223,7 @@ let handleGetUsers =
 //             return! Giraffe.ResponseWriters.json users next ctx
 //         }
 
-let handleGetTags query =
+let handleGetTags query: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let tags =
@@ -122,7 +231,20 @@ let handleGetTags query =
                 | Ok tags -> tags
                 | Result.Error e -> raise e
 
-            return! ResponseWriters.json tags next ctx
+            return! Giraffe.ResponseWriters.json tags next ctx
+        }
+
+let handleGetEvents: HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) -> 
+        task {
+            let events =
+                match getEvents () with
+                | Ok events -> events
+                | Result.Error e -> raise e
+            
+            let payload = Encode.Auto.toString<Event list> (2, events)
+
+            return! Giraffe.ResponseWriters.text payload next ctx
         }
 
 let handleGetSecured: HttpHandler =
@@ -141,12 +263,17 @@ let webApp =
         GET >=>
             choose [
                 route "/" >=> handleGetHello
-                route "/secured" >=> authorize >=> handleGetSecured
                 route "/api" >=> handleGetHelloApi
-                route "/users" >=> handleGetUsers
                 routef "/tags/%s" handleGetTags
                 // routef "/find-users/%f-%f-%f" handleFindUsers
             ]
+        authorize >=>
+            GET >=>
+                route "/secured" >=> handleGetSecured
+                route "/users" >=> handleGetUsers
+                route "/events" >=> handleGetEvents
+                routef "/user/%i" handleGetUserByAuth
+
         setStatusCode 404 >=> text "Not Found" ]
 
 // ---------------------------------

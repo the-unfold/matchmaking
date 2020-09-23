@@ -64,6 +64,8 @@ module App =
     let update (msg: Msg) (state: State): State * Cmd<Msg> =
         match msg, state.CurrentPage with
         | LoginMsg loginMsg, Page.Login loginState -> 
+        // {...state, loginstate = updateLoginState (loginMsg, state.loginState)}
+        // |> podglanut' {..state, dfsdfsdgb}
             match loginMsg with
             | Login.GetUser (Finished (Ok user)) -> 
                 // let userMapState, userMapCmd = UserMap.init user
@@ -73,7 +75,7 @@ module App =
                     User = Some user
                     // CurrentPage = Page.Map userMapState
                     CurrentPage = Page.EventsList eventsListState
-                    Navbar = Some navbarState }, 
+                    Navbar = Some navbarState }, // Cmd: use router, navigate to another page, hash router
                 Cmd.batch [
                     // Cmd.map UserMapMsg userMapCmd; 
                     Cmd.map EventsListMsg eventsListCmd
@@ -124,6 +126,8 @@ module App =
 
     let render (state: State) (dispatch: Msg -> unit) =
         div [] [
+            // GeneralTemplate state.loginState state.pageState
+            // in GeneralTemplate: ... Navbar state.loginState
             match state.Navbar with
             | Some navbarState -> 
                 Navbar.render navbarState (NavbarMsg >> dispatch)

@@ -19,10 +19,18 @@ let (|Regex|_|) pattern input =
     let m = Regex.Match(input, pattern)
     if m.Success then Some(m.Value) else None
 
-let inline decodeResponse<'T> response =
+let inline decodeResponseAuto<'T> response =
      match response.statusCode, response.responseText with
         | 200, t -> Decode.Auto.fromString<'T> (t, caseStrategy=SnakeCase)
         | _, t -> Error t
+
+let resultTraverse (f: 'a -> Result<'b, 'e>) (list: 'a list): Result<'b list, 'e> =
+    let folder head tail = 
+        Result.bind (fun h -> 
+            Result.bind (fun t -> Ok (h::t)) tail
+        ) (f head)
+
+    List.foldBack folder list (Ok [])
 
 [<RequireQualifiedAccess>]
 module Validate =

@@ -3,6 +3,7 @@ module Login
 
 open Elmish
 open Fable.Core.JS
+open Fable.Core
 open Fable.React
 open Fable.React.Props
 open Fable.SimpleHttp
@@ -10,24 +11,13 @@ open Thoth.Json
 open Utils
 open Common
 open Utils.AsyncResult
+// let Async = Microsoft.FSharp.Control.Async
 
-type TokenType =
-    TokenType of string
 
-type TokenScope =
-    TokenScope of string
-
-type TokenResponse = {
-    AccessToken: string
-    ExpiresIn: int
-    TokenType: string
-    Scope: string
-}
 
 type State = {
     Login: string
     Password: string
-    LoginAttempt: Deferred<Result<TokenResponse, string>>
     UserInfo: Deferred<Result<User, string>>
 }
 
@@ -35,7 +25,7 @@ type Msg =
     // | LoginTriggered
     | LoginTextChanged of string
     | PasswordTextChanged of string
-    | Login of AsyncOperationStatus<Result<TokenResponse, string>>
+    | Login of AsyncOperationStatus<Result<ApiToken, string>>
     | GetUser of AsyncOperationStatus<Result<User, string>>
 
 
@@ -61,33 +51,58 @@ let logIn (login, password) =
 
         console.log tokenResponse
 
-        let token = decodeResponse<TokenResponse> tokenResponse
+        let token = decodeResponseAuto<ApiToken> tokenResponse
 
         return token
     }
     
-
-
-
-let loginCommand (login, password) : Cmd<_> =
-    Cmd.OfAsync.either logIn (login, password) (Finished >> Login) raise
-
-let getUserInfo (accessToken: TokenResponse) =
-    async {
+let getUser (accessToken: ApiToken) =
+    asyncResult {
         let token = sprintf "%O %s" accessToken.TokenType accessToken.AccessToken
 
-        let! userResponse =
+        let authUserResponse =
             Http.request "/auth/connect/userinfo"
             |> Http.method GET
             |> Http.header (Headers.authorization token)
             |> Http.send 
-        
-        console.log userResponse
-        
-        let user = decodeResponse<User> userResponse
+
+        let! authUser = async.Bind (authUserResponse, decodeResponseAuto<AuthUser> >> async.Return)
+
+        let userResponse =
+            Http.request (sprintf "/api/user/%s" authUser.Sub)
+            |> Http.method GET
+            |> Http.header (Headers.authorization token)
+            |> Http.send
+
+        let! user = async.Bind (userResponse, decodeResponseAuto<User> >> async.Return)
 
         return user
     }
+
+let loginCommand (login, password) : Cmd<_> =
+    Cmd.OfAsync.either logIn (login, password) (Finished >> Login) raise
+
+let getUserCommand (token: ApiToken) : Cmd<_> =
+    Cmd.OfAsync.either getUser token (Finished >> GetUser) raise
+
+// let getUserInfo (accessToken: TokenResponse) =
+//     async {
+//         let token = sprintf "%O %s" accessToken.TokenType accessToken.AccessToken
+
+//         let! userResponse =
+//             Http.request "/auth/connect/userinfo"
+//             |> Http.method GET
+//             |> Http.header (Headers.authorization token)
+//             |> Http.send 
+        
+//         console.log userResponse
+        
+//         let authUser = decodeResponse<AuthUser> userResponse
+
+//         // let user = Result.bind (fun au -> )
+
+//         return user
+//     }
 
 
 // let loginAngGetUser (login, password) =
@@ -100,24 +115,24 @@ let getUserInfo (accessToken: TokenResponse) =
 //         return ui
 //     }
 
-let getUserInfoCommand (token: TokenResponse): Cmd<Msg> =
-    Cmd.OfAsync.either getUserInfo token (Finished >> GetUser) raise
+// let getUserInfoCommand (token: TokenResponse): Cmd<Msg> =
+//     Cmd.OfAsync.either getUserInfo token (Finished >> GetUser) raise
 
-let saveTokenToLocalStorageCommand (token: TokenResponse): Cmd<Msg> =
+let saveTokenToLocalStorageCommand (token: ApiToken): Cmd<Msg> =
     let tokenJson = Encode.Auto.toString (0, token)
     Browser.WebStorage.localStorage.setItem ("token", tokenJson)
     Cmd.none
 
 let init (): State * Cmd<Msg> =
-    let state = { Login = ""; Password = ""; LoginAttempt = NotStarted; UserInfo = NotStarted }
+    let state = { Login = ""; Password = ""; UserInfo = NotStarted }
     let storedToken = 
         match Browser.WebStorage.localStorage.getItem "token" with
         | "" -> Error "token not found"
-        | str -> Decode.Auto.fromString<TokenResponse> str
+        | str -> Decode.Auto.fromString<ApiToken> str
     
     match storedToken with
     | Error _ -> state, Cmd.none
-    | Ok token -> state, getUserInfoCommand token
+    | Ok token -> state, getUserCommand token
 
 
 let update (msg: Msg) (state: State): State * Cmd<Msg> =
@@ -127,9 +142,9 @@ let update (msg: Msg) (state: State): State * Cmd<Msg> =
     | PasswordTextChanged password -> { state with Password = password }, Cmd.none
     | Login Started -> state, loginCommand (state.Login, state.Password)
     | Login (Finished (Ok token)) -> 
-        { state with LoginAttempt = Resolved (Ok token); UserInfo = InProgress }, 
-        Cmd.batch [getUserInfoCommand token; saveTokenToLocalStorageCommand token]
-    | Login (Finished (Error e)) -> { state with LoginAttempt = Resolved (Error e) }, Cmd.none
+        { state with UserInfo = InProgress }, 
+        Cmd.batch [getUserCommand token; saveTokenToLocalStorageCommand token]
+    | Login (Finished (Error e)) -> state, Cmd.none
     | GetUser Started -> state, Cmd.none
     | GetUser (Finished result) -> { state with UserInfo = Resolved result}, Cmd.none
 
