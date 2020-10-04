@@ -45,6 +45,7 @@
     <Compile Include="EventsList.fs" />
     <Compile Include="Event.fs" />
     <Compile Include="App.fs" />
+    <Compile Include="RouterExample.fs "/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Browser.Dom" Version="1.1.0" />
@@ -53,5 +54,6 @@
     <PackageReference Include="Fable.Fetch" Version="2.2.0" />
     <PackageReference Include="Thoth.Json" Version="4.1.0" />
     <PackageReference Include="Fable.SimpleHttp" Version="3.0.0" />
+    <PackageReference Include="Fable.Elmish.Browser" Version="3.0.4" />
   </ItemGroup>
 </Project>

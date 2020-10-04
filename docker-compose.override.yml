@@ -11,8 +11,6 @@ services:
       - /dev-app/.fable/ # exclude
       - /dev-app/src/bin/ # exclude
       - /dev-app/src/obj/ # exclude
-    ports:
-      - '8080:8080'
   api:
     # выполнить `docker-compose build webapp` при переходе в `dev режим` или изменении зависимостей
     build: 
@@ -28,5 +26,3 @@ services:
       - ./auth:/app
       - /app/bin # exclude
       - /app/obj #exclude
-      
-      
