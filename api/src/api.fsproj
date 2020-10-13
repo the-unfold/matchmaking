@@ -15,6 +15,7 @@
     <PackageReference Include="Npgsql.FSharp" Version="3.6.0"/>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.6"/>
     <PackageReference Include="Thoth.Json.Net" Version="4.1.0"/>
+    <PackageReference Include="Dapper.FSharp" Version="1.12.2"/>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.fs"/>
