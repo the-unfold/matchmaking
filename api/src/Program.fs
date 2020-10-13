@@ -19,18 +19,6 @@ open Dapper.FSharp
 open Dapper.FSharp.PostgreSQL
 open System.Data.Common;
 open Npgsql
-// open Chiron
-// let (<!>) = Chiron.Operators.(<!>)
-
-// type Position = {
-//     Lat: float
-//     Lon: float
-//     } with 
-
-//     static member FromJson (_ : Position) = 
-//             fun (lat, lon) -> { Lon = lon; Lat = lat }
-//             <!> Json.read "coordinates"
-
 
 type User = {
     id: int
@@ -57,10 +45,6 @@ type Event = {
     attendees: User list
 }
 
-// let parsePosition json: Position =
-//     (Json.parse >> Json.deserialize) json
-
-
 let connection =
     Sql.host "postgis"
     |> Sql.port 5432
@@ -70,27 +54,15 @@ let connection =
 
 let pgConnectionString = Sql.formatConnectionString connection
 
-let getPgUsers() = 
+let getUsers() = 
     use conn = new NpgsqlConnection(pgConnectionString)
     conn.Open()
 
     select {
         table "users"
-
     } |> conn.SelectAsync<User>
-    
 
-let getUsers() =
-    connection
-    |> Sql.connectFromConfig
-    |> Sql.query "SELECT id, auth_id, name FROM users"
-    |> Sql.execute (fun read -> {
-        id = read.int "id"
-        auth_id = read.int "auth_id"
-        name = read.text "name"
-    })
-
-type GetEventsRow = {
+type EventsRow = {
     id: int
     title: string
     description: string
@@ -98,13 +70,21 @@ type GetEventsRow = {
     location_geo: string option
     location_url: string option
     date_time: System.DateTime
-    tag_id: int
-    tag_name: string
-    tag_slug: string
 }
 
-let eventFromRow r =
-    {
+type TagsRow = {
+    id: int
+    name: string
+    slug: string
+}
+
+type EventTagsRow = {
+    event_id: int
+    tag_id: int
+}
+
+let rowToEvent (r: EventsRow): Event = 
+     {
         id = r.id
         title = r.title
         description = r.description
@@ -117,61 +97,40 @@ let eventFromRow r =
         attendees = [] 
     }
 
-let tagFromRow r =
+let rowToTag (r: TagsRow): Tag =
     {
-        id = r.tag_id
-        name = r.tag_name
-        slug = r.tag_slug
+        id = r.id
+        name = r.name
+        slug = r.slug
     }
 
+let mkTupleFlip a b = 
+    (b, a)
+
 let getEvents () =
-    connection
-    |> Sql.connectFromConfig
-    |> Sql.query 
-        @"SELECT e.id, e.title, e.description, e.image_url, e.location_geo, e.location_url, e.date_time, t.id as tag_id, t.name as tag_name, t.slug as tag_slug
-         FROM events as e
-         JOIN event_tags ON e.id = event_tags.event_id
-         JOIN tags as t ON t.id = event_tags.tag_id "
-    |> Sql.execute (fun read -> {
-        id = read.int "id"
-        title = read.string "title"
-        description = read.string "description"
-        image_url = read.stringOrNone "image_url"
-        location_geo = read.stringOrNone "location_geo"
-        location_url = read.stringOrNone "location_url"
-        date_time = read.dateTime "date_time"
-        tag_id = read.int "tag_id"
-        tag_name = read.string "tag_name"
-        tag_slug = read.string "tag_slug"
-    })
-    |> Result.map (List.fold (fun result r -> 
-        match result with
-        | [] -> [eventFromRow r]
-        | e::xs when e.id = r.id -> 
-            {e with tags = tagFromRow r :: e.tags} :: xs
-        | e::xs -> 
-            eventFromRow r :: xs
-        ) [])
+    use conn = new NpgsqlConnection(pgConnectionString)
+    conn.Open()
 
-    
-    // |> Sql.query "SELECT id, name, ST_AsGeoJson(location) as loc, radius FROM users"
-    // |> Sql.execute (fun read -> {
-    //     Id = read.int "id"
-    //     Name = read.text "name"
-    //     Location =  "loc" |> read.text |> parsePosition
-    //     Radius = read.double "radius"
-    // })
+    task {
+        let! rows = 
+            select {
+                table "events"
+                leftJoin "event_tags" "event_id" "events.id"
+                leftJoin "tags" "id" "event_tags.tag_id"
+                orderBy "events.id" Asc
+            } |> conn.SelectAsync<EventsRow, EventTagsRow, TagsRow>
 
-// let getUsersInArea (lon: float) (lat: float) (rad: float) =
-//     connection
-//     |> Sql.connectFromConfig
-//     |> Sql.query "SELECT name FROM users WHERE ST_Intersects(
-//         st_buffer(ST_GeographyFromText(@point), @rad), 
-//         st_buffer(users.location, users.radius))"
-//     |> Sql.parameters [
-//         ("point", Sql.string (sprintf "POINT(%f %f)" lon lat))
-//         ("rad", Sql.double rad) ]
-//     |> Sql.execute (fun read -> read.string "name")
+        let events = 
+            rows 
+            |> Seq.fold (fun result (e, _, t) -> 
+                match result with 
+                | [] -> [rowToEvent e]
+                | x::xs when x.id = e.id -> {x with tags = rowToTag t :: x.tags} :: xs
+                | xs -> rowToEvent e :: xs) []
+            |> Seq.toList
+
+        return events
+    }
 
 let getUserByAuth authId =
     connection
@@ -214,12 +173,7 @@ let mkTuple a b =
 let handleGetUsers: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
-            // let users = 
-            //     match getUsers() with                 
-            //     | Result.Ok users -> users
-            //     | Result.Error e -> raise e
-            let! users = 
-                getPgUsers();
+            let! users = getUsers();
             let payload = users |> Seq.toList |> mkTuple 2 |> Encode.Auto.toString<User list>
 
             return! Giraffe.ResponseWriters.text payload next ctx
@@ -235,16 +189,6 @@ let handleGetUserByAuth authId: HttpHandler =
 
             return! Giraffe.ResponseWriters.json user next ctx
         }
-// let handleFindUsers (lon: float, lat: float, rad: float): HttpHandler =
-//     fun (next: HttpFunc) (ctx: HttpContext) ->
-//         task {
-//             let users = 
-//                 match getUsersInArea lon lat rad with
-//                 | Result.Ok us -> us
-//                 | Result.Error e -> raise e
-
-//             return! Giraffe.ResponseWriters.json users next ctx
-//         }
 
 let handleGetTags query: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
@@ -260,10 +204,7 @@ let handleGetTags query: HttpHandler =
 let handleGetEvents: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) -> 
         task {
-            let events =
-                match getEvents () with
-                | Ok events -> events
-                | Result.Error e -> raise e
+            let! events = getEvents()
             
             let payload = Encode.Auto.toString<Event list> (2, events)
 
@@ -288,13 +229,13 @@ let webApp =
                 route "/" >=> handleGetHello
                 route "/api" >=> handleGetHelloApi
                 routef "/tags/%s" handleGetTags
+                route "/events" >=> handleGetEvents
                 // routef "/find-users/%f-%f-%f" handleFindUsers
             ]
         authorize >=>
             GET >=>
                 route "/secured" >=> handleGetSecured
                 route "/users" >=> handleGetUsers
-                route "/events" >=> handleGetEvents
                 routef "/user/%i" handleGetUserByAuth
 
         setStatusCode 404 >=> text "Not Found" ]
