@@ -15,6 +15,10 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Giraffe
 open Npgsql.FSharp
 open Thoth.Json.Net
+open Dapper.FSharp
+open Dapper.FSharp.PostgreSQL
+open System.Data.Common;
+open Npgsql
 // open Chiron
 // let (<!>) = Chiron.Operators.(<!>)
 
@@ -56,12 +60,25 @@ type Event = {
 // let parsePosition json: Position =
 //     (Json.parse >> Json.deserialize) json
 
+
 let connection =
     Sql.host "postgis"
     |> Sql.port 5432
     |> Sql.username "docker"
     |> Sql.password "docker"
     |> Sql.database "gis"
+
+let pgConnectionString = Sql.formatConnectionString connection
+
+let getPgUsers() = 
+    use conn = new NpgsqlConnection(pgConnectionString)
+    conn.Open()
+
+    select {
+        table "users"
+
+    } |> conn.SelectAsync<User>
+    
 
 let getUsers() =
     connection
@@ -191,15 +208,21 @@ let handleGetHelloApi: HttpHandler =
             return! Giraffe.ResponseWriters.json response next ctx
         }
 
+let mkTuple a b =
+    (a, b)
+
 let handleGetUsers: HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
-            let users = 
-                match getUsers() with                 
-                | Result.Ok users -> users
-                | Result.Error e -> raise e
+            // let users = 
+            //     match getUsers() with                 
+            //     | Result.Ok users -> users
+            //     | Result.Error e -> raise e
+            let! users = 
+                getPgUsers();
+            let payload = users |> Seq.toList |> mkTuple 2 |> Encode.Auto.toString<User list>
 
-            return! Giraffe.ResponseWriters.json users next ctx
+            return! Giraffe.ResponseWriters.text payload next ctx
         }
 
 let handleGetUserByAuth authId: HttpHandler =
@@ -330,8 +353,12 @@ let configureLogging (builder : ILoggingBuilder) =
            .AddConsole()
            .AddDebug() |> ignore
 
+
+
 [<EntryPoint>]
 let main _ =
+    Dapper.FSharp.OptionTypes.register();
+
     Host.CreateDefaultBuilder()
         .ConfigureWebHostDefaults(fun webHostBuilder ->
             webHostBuilder
